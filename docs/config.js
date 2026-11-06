@@ -1,6 +1,6 @@
 /*  ─────────────────────────────────────────────────────────────────────
  *  CONFIGURACIÓN · lo único que editas en la página y en el panel.
- *  MODO: 'real' → funciona sin Supabase, con datos de prueba en este navegador (para diseñar).
+ *  MODO: 'demo' → funciona sin Supabase, con datos de prueba en este navegador (para diseñar).
  *        'real' → usa Supabase: pega API_URL y ANON_KEY.
  *  Supabase → tu proyecto → Project Settings → API (o el botón "Connect"):
  *    API_URL  = la "Project URL", por ejemplo https://abcdefghijkl.supabase.co
@@ -8,7 +8,7 @@
  *    Es pública por diseño. NUNCA pegues la service_role ni la secret.
  *  ───────────────────────────────────────────────────────────────────── */
 window.CIIC_CONFIG = {
-  MODO: 'demo',
+  MODO: 'real',
   API_URL: 'https://hbnrhrmndadciornanbx.supabase.co',
   ANON_KEY: 'sb_publishable_it4qsCUK2UeX5Q5sU5WVzw_mOnF-gBW',
   NOMBRE_EVENTO: 'Congreso Internacional de Ingeniería Civil 2026',
