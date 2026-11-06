@@ -16,14 +16,14 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 
 | Ruta | Qué es |
 |---|---|
-| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql` … `08_sprint4_operacion.sql`) |
+| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql` … `09_sprint4_ensayo.sql`) |
 | `supabase/instalar.py` | Instala o pone al día una base: aplica solo las migraciones pendientes, todas en una transacción (registro `privado.migraciones`) |
-| `supabase/restaurar.py` | Restaura un respaldo del panel: `--verificar`, `--solo-faltantes`, `--completo` (documentación §19.5) |
+| `supabase/restaurar.py` | Restaura un respaldo del panel: `--verificar`, `--solo-faltantes`, `--completo`, `--simular` (documentación §19.5) |
 | `local/armar_demos.py` | Arma `demo/*.html` (un archivo por página) a partir de docs/. No se editan a mano |
 | `local/generar_datos.py` | Genera la base ficticia (demo, SQL y CSV). No edites a mano sus salidas: cambia el generador y vuelve a correrlo |
 | `docs/index.html`, `docs/panel.html`, `docs/base.css`, `docs/config.js` | Páginas ya en v5.5 (participante y panel) |
 | `docs/demo/demo-api.js` | **Referencia ejecutable del contrato v5.5**: si dudas qué debe responder la base, mira la función correspondiente aquí |
-| `tester/tester.py` | Tester (355 pruebas en local desde el Sprint 4; los sprints agregan bloques) |
+| `tester/tester.py` | Tester (364 pruebas en local desde el Sprint 4.1; los sprints agregan bloques) |
 | `local/` | PostgreSQL local que imita a Supabase + servidor local |
 | `sprints/PLAN.md` | Tareas y criterios de aceptación de cada sprint |
 | `.claude/skills/` | `ciic-desarrollo` (cómo ejecutar un sprint) y `sql-ciic-inscripciones` (reglas para tocar SQL) |

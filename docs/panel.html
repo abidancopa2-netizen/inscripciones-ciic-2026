@@ -846,10 +846,21 @@
     const u = datos && datos.ultimoRespaldo;
     $('ultimo-respaldo').textContent = u ? 'Último respaldo: ' + u.fecha + ' · ' + u.quien + ' · ' + Math.round(u.bytes / 1024) + ' KB' : 'Aún no se descargó ningún respaldo.';
   }
+  async function respaldoTexto() {      // el texto tal como lo da la base: volver a escribirlo en el navegador cambiaría números como 1.50
+    if (DEMO) { const r = await api('panel_respaldo'); return { r, texto: JSON.stringify(r, null, 1) }; }
+    const p = { action: 'panel_respaldo' };
+    if (prueba) { p.key = prueba.clave; p.comoRol = prueba.rol; }
+    try {
+      const res = await fetch(API + '/rest/v1/rpc/api', { method: 'POST', headers: await cabeceras(), body: JSON.stringify({ p }) });
+      const texto = await res.text();
+      const r = JSON.parse(texto);
+      return { r: r && typeof r === 'object' ? r : { ok: false, tipo: 'sin_conexion', mensaje: 'Respuesta inesperada.' }, texto };
+    } catch (e) { return { r: { ok: false, tipo: 'sin_conexion', mensaje: 'No se pudo descargar el respaldo. Vuelve a intentarlo.' }, texto: '' }; }
+  }
   $('btn-respaldo').addEventListener('click', async () => {
-    const r = await api('panel_respaldo');
-    if (!r.ok) return aviso(r);
-    descargar('respaldo-ciic-' + fechaArchivo() + '.json', JSON.stringify(r, null, 1), 'application/json');
+    const { r, texto } = await respaldoTexto();
+    if (!r.ok) return aviso(r.tipo === 'ocupado' ? { tipo: 'ocupado', mensaje: 'El sistema está ocupado: vuelve a pulsar "Descargar respaldo" en unos segundos.' } : r);
+    descargar('respaldo-ciic-' + fechaArchivo() + '.json', texto, 'application/json');
     aviso({ ok: true, tipo: 'panel' }, 'Respaldo descargado. Huella ' + String(r.huella).slice(0, 12) + '…');
     await refrescar(); pintarRespaldo();
   });

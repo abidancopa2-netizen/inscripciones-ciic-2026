@@ -11,6 +11,8 @@ Sin --dsn escribe el SQL para pegarlo en el SQL Editor de Supabase (todo en una 
 directamente (mejor si el archivo es grande); en una base remota exige --confirmar <ref>.
 --simular hace todo y lo deshace al final: muestra qué volvería, sin cambiar nada. Úsalo siempre primero.
 --tablas padron,inscripciones restringe qué tablas se devuelven (por defecto, todas).
+--aceptar-huella-distinta (EMERGENCIA): restaura aunque la huella no coincida, si las filas de cada tabla cuadran;
+  p. ej. un respaldo guardado con el panel del Sprint 4 que tenga decimales en datos. Siempre con --simular primero.
 
 Siempre verifica primero la huella: si el archivo está dañado o se modificó sin recalcularla, no genera nada.
 Antes de cambiar nada, el SQL exige las inscripciones cerradas, un esquema igual o más nuevo que el del respaldo y,
@@ -26,6 +28,7 @@ Las cuentas del equipo (Supabase Auth) no están en el respaldo: en un proyecto 
 El respaldo y el SQL tienen datos personales: nunca en GitHub, en chats ni en correos.
 """
 import argparse
+import decimal
 import hashlib
 import json
 import re
@@ -57,8 +60,21 @@ def texto_jsonb(v):
         return 'null'
     if isinstance(v, int):
         return str(v)
+    if isinstance(v, decimal.Decimal):          # los decimales se leen tal cual vienen (1.50 sigue siendo 1.50)
+        return format(v, 'f')
     if isinstance(v, float):
         return str(int(v)) if v.is_integer() else repr(v)
+    return json.dumps(v, ensure_ascii=False)
+
+
+def json_compacto(v):
+    """JSON sin espacios para el SQL, con los decimales exactos (json.dumps no sabe escribir Decimal)."""
+    if isinstance(v, dict):
+        return '{' + ','.join(json.dumps(k, ensure_ascii=False) + ':' + json_compacto(x) for k, x in v.items()) + '}'
+    if isinstance(v, list):
+        return '[' + ','.join(json_compacto(x) for x in v) + ']'
+    if isinstance(v, decimal.Decimal):
+        return format(v, 'f')
     return json.dumps(v, ensure_ascii=False)
 
 
@@ -68,7 +84,7 @@ def sha(t):
 
 def leer(ruta):
     try:
-        r = json.loads(Path(ruta).read_text(encoding='utf-8-sig'))
+        r = json.loads(Path(ruta).read_text(encoding='utf-8-sig'), parse_float=decimal.Decimal)
     except (OSError, ValueError) as e:
         sys.exit(f'✘ No se pudo leer {ruta}: {e}')
     if not isinstance(r, dict) or not isinstance(r.get('tablas'), dict):
@@ -77,7 +93,7 @@ def leer(ruta):
 
 
 def verificar(r, ver=True):
-    """Devuelve la lista de problemas (vacía si el respaldo está sano)."""
+    """Devuelve (problemas, solo_huella): la lista de problemas y si todos son de huella (las filas cuadran)."""
     t, problemas = r['tablas'], []
     if r.get('formato') != 'ciic-respaldo-1':
         problemas.append(f'formato {r.get("formato")!r}: este programa lee ciic-respaldo-1 (respaldos del Sprint 4 en adelante)')
@@ -87,10 +103,11 @@ def verificar(r, ver=True):
         if not isinstance(t.get(nom), list):
             problemas.append(f'falta la tabla {nom}')
     if problemas:
-        return problemas
+        return problemas, False
     if len(t['config']) != 1 or t['config'][0].get('modo') not in ('PRUEBA', 'PRODUCCION'):
         problemas.append('la configuración del respaldo no es válida')
     filas, huellas = r.get('filas') or {}, r.get('huellas') or {}
+    de_huella = []
     if ver:
         print(f"Respaldo {r.get('version')} · modo {t['config'][0].get('modo')} · generado {r.get('generadoEn')} · {r.get('generadoPor')}")
     for nom in sorted(t, key=clave_jsonb):
@@ -102,13 +119,13 @@ def verificar(r, ver=True):
         if not n_ok:
             problemas.append(f'{nom}: {len(t[nom])} filas y el respaldo dice {filas.get(nom)}')
         if not h_ok:
-            problemas.append(f'{nom}: la huella no coincide (archivo dañado o modificado)')
+            de_huella.append(f'{nom}: la huella no coincide (archivo dañado o modificado)')
     total = sha(texto_jsonb(t))
     if total != r.get('huella'):
-        problemas.append('la huella total no coincide (archivo dañado o modificado)')
+        de_huella.append('la huella total no coincide (archivo dañado o modificado)')
     if ver:
         print(f"  {'✔' if total == r.get('huella') else '✘'} huella total {total[:12]}…")
-    return problemas
+    return problemas + de_huella, bool(de_huella) and not problemas
 
 
 def etiqueta(texto):
@@ -260,10 +277,12 @@ begin
         else '' end);
   end loop;
 
-  -- ids: las secuencias solo avanzan (nunca por debajo de lo ya entregado, aunque haya inserciones sin confirmar)
+  -- ids: las secuencias solo avanzan (nunca por debajo de lo ya entregado, aunque haya inserciones sin confirmar).
+  -- En una simulación no se tocan (setval no se deshace con la transacción).
   for id_rel, id_col in select a.attrelid::regclass, a.attname from pg_attribute a
                         where a.attidentity <> '' and a.attrelid in ('public.padron'::regclass, 'public.actividades'::regclass, 'public.inscripciones'::regclass,
-                                                                    'public.bitacora'::regclass, 'privado.incidencias'::regclass) loop
+                                                                    'public.bitacora'::regclass, 'privado.incidencias'::regclass)
+                          and not v_simular loop
     v_seq := pg_get_serial_sequence(id_rel::text, id_col);
     execute format('select greatest(coalesce((select max(%I) from %s), 0), coalesce(pg_sequence_last_value(%L::regclass), 0))', id_col, id_rel, v_seq) into v_max;
     if v_max > 0 then perform setval(v_seq, v_max, true); end if;
@@ -287,9 +306,9 @@ begin
   if not (privado.integridad() ->> 'ok')::boolean then
     raise exception 'La integridad no cuadra después de restaurar: se revierte todo.';
   end if;
-  perform privado.bitacora(null, 'Restauración', 'Restaurar respaldo',
+  if not v_simular then perform privado.bitacora(null, 'Restauración', 'Restaurar respaldo',
     v_modo || ' · respaldo del ' || v_fecha || ' · huella ' || left(v_huella, 12) || ' · ' || (select coalesce(sum(agregadas), 0) from ciic_informe where tabla <> 'config') || ' filas agregadas',
-    null, (select jsonb_object_agg(tabla, agregadas) from ciic_informe));
+    null, (select jsonb_object_agg(tabla, agregadas) from ciic_informe)); end if;
   if v_simular then
     raise exception using errcode = 'P0001', message = 'SIMULACIÓN · no se cambió nada. Con ' || v_modo || ' volvería:' || chr(10) ||
       (select string_agg(format('  %-24s respaldo %6s · agregaría %6s · ya están %6s', tabla, en_respaldo, agregadas, ya_estaban) || coalesce(' · ' || nullif(nota, ''), ''), chr(10) order by orden)
@@ -307,7 +326,7 @@ def generar_sql(r, modo, origen, tablas, simular):
     fecha = re.sub(r'[^0-9: -]', '', str(r.get('generadoEn', '')))[:19]
     datos = []
     for nom in TODAS:
-        txt = json.dumps(t[nom], ensure_ascii=False, separators=(',', ':'))
+        txt = json_compacto(t[nom])
         e = etiqueta(txt)
         datos.append(f"  ('{nom}', ${e}${txt}${e}$::jsonb)")
     reemplazos = {
@@ -338,6 +357,9 @@ def main():
     g.add_argument('--completo', action='store_true', help='base nueva, instalada con instalar.py y sin datos')
     g.add_argument('--solo-faltantes', action='store_true', help='devuelve solo lo borrado; no pisa nada')
     ap.add_argument('--simular', action='store_true', help='hace todo y lo deshace: muestra qué volvería')
+    ap.add_argument('--aceptar-huella-distinta', action='store_true',
+                    help='EMERGENCIA: restaura aunque la huella no coincida, si las filas de cada tabla sí cuadran (p. ej. un respaldo '
+                         'del Sprint 4 con decimales en datos). Úsalo con --simular primero')
     ap.add_argument('--tablas', help='solo estas tablas, separadas por comas (inscripciones incluye sus actividades)')
     ap.add_argument('--dsn', help='aplica directamente en esta base, en vez de escribir el SQL')
     ap.add_argument('--confirmar', help='identificador del proyecto: obligatorio con --dsn remoto')
@@ -350,16 +372,20 @@ def main():
             pass
     r = leer(a.respaldo)
     if a.verificar:
-        p = verificar(r)
+        p, solo_huella = verificar(r)
         if p:
             print('✘ Respaldo NO válido:\n  - ' + '\n  - '.join(p))
+            if solo_huella:
+                print('  Las filas de cada tabla cuadran: si es una emergencia y confías en el archivo, --aceptar-huella-distinta (con --simular primero).')
             return 1
         print('✔ Respaldo íntegro: se puede restaurar.')
         return 0
-    p = verificar(r, ver=False)
-    if p:
+    p, solo_huella = verificar(r, ver=False)
+    if p and not (solo_huella and a.aceptar_huella_distinta):
         print('✘ Respaldo NO válido, no se generó nada:\n  - ' + '\n  - '.join(p), file=sys.stderr)
         return 1
+    if p:
+        print('⚠ Huella distinta, aceptada a pedido (--aceptar-huella-distinta): las filas de cada tabla cuadran.\n  - ' + '\n  - '.join(p), file=sys.stderr)
     tablas = list(TABLAS)
     if a.tablas:
         tablas = [x.strip() for x in a.tablas.split(',') if x.strip()]

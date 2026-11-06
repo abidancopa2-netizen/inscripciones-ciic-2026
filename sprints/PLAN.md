@@ -71,7 +71,7 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 
 ---
 
-## Sprint 4 · Carga y operación · 08/11 · entregado el 06/11 (migración 08)
+## Sprint 4 · Carga y operación · 08/11 · ✅ en verde el 06/11 (08 en PRUEBA y PRODUCCIÓN; 4.1 con la 09)
 
 | # | Tarea | Doc | Demo |
 |---|---|---|---|
@@ -83,6 +83,7 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 | 4.6 | **Carga de 1000**: padrón sintético (`ZQX`, con `panel_padron_importar` en una llamada: no hizo falta `admin_sembrar`) y bloque W con 1000 personas; el tester baja el umbral para ver la alerta y lo restaura | §22 | — |
 | 4.7 | **Simulacro de restauración**: bloque Y | §19.5 | — |
 | 4.8 | Tester: bloques W, Y y AF (X ya está desde el Sprint 1) | §22 | — |
+| 4.10 | **Sprint 4.1**, del reporte del Sprint 4: ensayo de "Pasar a producción" y "Vaciar" por la API real, deshecho en la misma llamada (migración 09, `admin_ensayo`, bloque AF); respaldo guardado tal como lo da la base (decimales exactos) y `--aceptar-huella-distinta` para emergencias; `--simular` sin tocar bitácora ni ids; W desde Windows (conexiones reutilizadas, límite de archivos, llegada en 3 s) | — | — |
 | 4.9 | Del reporte del Sprint 3: aviso oculto tras el código y `#error` del enlace usado en el panel; escáner con subconsulta; marcar en el grupo sin carrera; página publicada sin inyectar `config.js`; causa de cada reintento en el reporte | — | — |
 
 **Aceptación.** Tester completo en verde en local y en el proyecto de prueba; P95 de la carga anotado; restauración completa y parcial comprobadas.

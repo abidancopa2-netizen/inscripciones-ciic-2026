@@ -28,7 +28,7 @@ El código pesado se escribe en otra conversación (la de diseño) y llega listo
      --web http://127.0.0.1:8787/ --personas 150 --salida /tmp/r > /tmp/tester.log 2>&1
    grep -E "FALLA|OMITE|pruebas|Duración|⛔|… " /tmp/tester.log
    ```
-   Desde el Sprint 4 el bloque W inscribe además 1000 personas sintéticas y prueba la alerta de saturación (unos 2 minutos más; `--personas-w 0` lo salta en corridas rápidas, nunca en la de aceptación). Las líneas "… " traen las mediciones (p50 y p95) que van al reporte; si hubo reintentos, el final del registro dice la causa del primero de cada tipo.
+   Desde el Sprint 4 el bloque W inscribe además 1000 personas sintéticas y prueba la alerta de saturación (unos 2 minutos más; `--personas-w 0` lo salta en corridas rápidas, nunca en la de aceptación). Contra Supabase, la medición de referencia de W es la de GitHub Actions: desde una PC mide sobre todo la PC y su red (Sprint 4: límite de archivos de Windows y conexiones TLS); si desde la PC fallan conexiones (`SSLEOFError`, `OSError 24`), córrela con `--personas-w 0` y deja W a GitHub. Las líneas "… " traen las mediciones (p50 y p95) que van al reporte; si hubo reintentos, el final del registro dice la causa del primero de cada tipo.
    Para leer solo las fallas: `grep -A2 "FALLA" /tmp/tester.log`. No pegues el registro completo.
    El tester enmascara documentos, nombres, correos, celulares y códigos en lo que imprime y guarda. Solo para depurar en local: `--sin-mascara`.
    Desde el Sprint 2 el navegador va siempre (`--web`): requiere `pip install playwright` y `python -m playwright install chromium`.

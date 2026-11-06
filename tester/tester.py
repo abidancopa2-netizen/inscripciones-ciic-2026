@@ -124,6 +124,11 @@ class Cliente:
         self.latencias, self.reintentos, self.saturado, self.motivos, self.ejemplos = [], 0, 0, {}, {}
         self._c = threading.Lock()
         self.s = requests.Session()
+        # Conexiones que se reutilizan: con el pool de 10 de requests, 1000 personas abrían una conexión TLS nueva por llamada,
+        # y desde una PC con Windows eso agotaba archivos (OSError 24) y conexiones (SSLEOFError) antes que el sistema (Sprint 4).
+        from requests.adapters import HTTPAdapter
+        for esquema in ('https://', 'http://'):
+            self.s.mount(esquema, HTTPAdapter(pool_connections=4, pool_maxsize=1200))
 
     def llamar(self, datos: dict, paciente=False, cab=None, ronda_auto=True) -> dict:
         d = dict(datos)
@@ -1354,8 +1359,13 @@ class Tester:
         self.seccion('Y · Respaldo y restauración (R-41, §19.5)')
         self.tipo('Respaldo como admin → sin_permiso (es del propietario)', self.cli.llamar({'action': 'panel_respaldo', 'key': self.key, 'comoRol': 'admin'}), 'sin_permiso')
         t0 = time.perf_counter()
-        r = self.panel('panel_respaldo')
+        h = {'apikey': self.a.anon, **({'Authorization': f'Bearer {self.a.anon}'} if self.a.anon.startswith('eyJ') else {})}
+        texto = self.cli.s.post(self.cli.url, json={'p': {'action': 'panel_respaldo', 'key': self.key}}, headers=h, timeout=90).text
         dur = time.perf_counter() - t0
+        try:
+            r = json.loads(texto)
+        except ValueError:
+            r = {'tipo': 'respuesta_no_api', 'mensaje': texto[:120]}
         tablas = {'config', 'tipos_actividad', 'padron', 'actividades', 'cruces_permitidos', 'inscripciones', 'inscripcion_actividades', 'organizadores', 'bitacora', 'incidencias'}
         if not self.ok('El propietario descarga el respaldo con las 10 tablas, filas y huellas', r.get('tipo') == 'panel' and set(r.get('tablas', {})) == tablas
                        and set(r.get('huellas', {})) == tablas and len(str(r.get('huella', ''))) == 64, '10 tablas · huellas', sorted(r.get('tablas', {}))):
@@ -1369,9 +1379,13 @@ class Tester:
         self.ok('El panel muestra el último respaldo (fecha, quién, tamaño)', bool(u.get('fecha')) and 'Tester' in str(u.get('quien')) and u.get('bytes', 0) > 0, 'fecha · Tester · KB', u)
         with tempfile.TemporaryDirectory() as tmp:            # nunca en resultados/: el respaldo tiene datos personales
             f = Path(tmp) / 'respaldo.json'
-            f.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding='utf-8')        # como lo guarda el panel
+            f.write_text(texto, encoding='utf-8')        # tal como lo da la base (así lo guarda el panel desde el Sprint 4.1)
             v = self._restaurar(f, '--verificar')
             self.ok('restaurar.py --verificar: huella, filas y versión correctas', v.returncode == 0 and 'íntegro' in v.stdout, 'íntegro', (v.stdout + v.stderr)[-160:])
+            g0 = Path(tmp) / 'reescrito.json'
+            g0.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding='utf-8')     # como lo guardaba el panel del Sprint 4
+            v = self._restaurar(g0, '--verificar')
+            self.ok('Un respaldo vuelto a escribir (con otros espacios) también se verifica', v.returncode == 0, 'íntegro', (v.stdout + v.stderr)[-120:])
             mal = json.loads(json.dumps(r))
             fila = (mal['tablas']['padron'] or mal['tablas']['tipos_actividad'])[0]
             fila[next(iter(fila))] = str(fila[next(iter(fila))]) + 'X'
@@ -1489,6 +1503,7 @@ class Tester:
             self.abrir()
         self.tipo('Abierto → requiere_cierre', self.panel('panel_preparar_produccion', llave='PRODUCCION'), 'requiere_cierre')
         self.tipo('Como admin → sin_permiso (es del propietario)', self.cli.llamar({'action': 'panel_preparar_produccion', 'key': self.key, 'comoRol': 'admin', 'llave': 'PRODUCCION'}), 'sin_permiso')
+        self.af_ensayo()
         con = self.sql()
         if not con:
             self.cerrar()
@@ -1533,6 +1548,29 @@ class Tester:
         con.close()
         p = self.cli.llamar({'action': 'admin_ping', 'key': self.key})
         self.ok('Después de deshacer: modo PRUEBA y la clave del tester funciona', p.get('tipo') == 'admin' and p['config']['modo'] == 'PRUEBA', 'admin · PRUEBA', p.get('tipo'))
+
+    def af_ensayo(self):
+        """Pasar a producción y Vaciar POR LA API REAL (con safeupdate en Supabase), deshechos en la misma llamada (migración 09)."""
+        res = self.resumen()
+        ins0, abierto0 = res['totales']['inscritos'] + res['totales']['anulados'], res['config']['abierto']
+        pad0 = sum(res['totales']['padron'].values())
+        self.tipo('Ensayo de otra acción → valor_invalido', self.cli.llamar({'action': 'admin_ensayo', 'key': self.key, 'que': 'panel_quitar'}), 'valor_invalido')
+        for que, nombre in (('panel_preparar_produccion', 'Pasar a producción'), ('panel_vaciar_prueba', 'Vaciar datos de prueba')):
+            e = self.cli.llamar({'action': 'admin_ensayo', 'key': self.key, 'que': que})
+            d, desp = e.get('durante') or {}, e.get('despues') or {}
+            if not self.ok(f'Ensayo de "{nombre}" por la API real: funciona (safeupdate y disparadores incluidos)',
+                           e.get('tipo') == 'admin' and e.get('ok') is True and (e.get('respuesta') or {}).get('tipo') == 'panel', 'panel',
+                           e.get('error') or (e.get('respuesta') or {}).get('tipo') or e.get('tipo')):
+                continue
+            if que == 'panel_preparar_produccion':
+                bien = (d.get('modo') == 'PRODUCCION' and d.get('clave') is False and d.get('inscripciones') == 0 and d.get('inscritos') == 0
+                        and d.get('padronPrueba') == 0 and d.get('actividades', 0) > 0 and d.get('bitacoraPrimera') == 'Pasar a producción' and d.get('integridad'))
+                self.ok('…durante: modo PRODUCCION, sin clave, sin inscripciones ni documentos del tester, actividades intactas', bien, 'así', d)
+            else:
+                bien = d.get('modo') == 'PRUEBA' and d.get('clave') is True and (d.get('padron'), d.get('actividades'), d.get('inscripciones')) == (0, 0, 0)
+                self.ok('…durante: padrón, actividades e inscripciones en 0; modo y clave intactos', bien, 'así', d)
+            self.ok(f'…y se deshizo: modo PRUEBA, clave del tester, padrón e inscripciones como antes', desp.get('modo') == 'PRUEBA' and desp.get('clave') is True
+                    and desp.get('inscripciones') == ins0 and desp.get('padron') == pad0 and desp.get('abierto') == abierto0, f'PRUEBA · {pad0} · {ins0}', desp)
 
     # ── navegador ──
     def p_navegador(self):
@@ -1653,6 +1691,14 @@ class Tester:
                     pp.wait_for_timeout(700)
                     pp.screenshot(path=str(fotos / f'05-panel-{t}.png'), full_page=True)
                 self.ok('Panel: las cinco pestañas abren sin errores', not errores, 'sin errores', errores[:2])
+                pp.click('[data-tab="sistema"]')
+                with pp.expect_download(timeout=30000) as descarga:
+                    pp.click('#btn-respaldo')
+                with tempfile.TemporaryDirectory() as tmp:          # el respaldo nunca queda en resultados/
+                    f = Path(tmp) / 'respaldo.json'
+                    descarga.value.save_as(str(f))
+                    v = self._restaurar(f, '--verificar')
+                    self.ok('Panel: "Descargar respaldo" baja un archivo que restaurar.py verifica', v.returncode == 0, 'íntegro', (v.stdout + v.stderr)[-120:])
             except Exception as e:  # noqa: BLE001
                 self.ok('Navegador sin errores', False, 'sin errores', str(e)[:200])
                 pg.screenshot(path=str(fotos / 'error.png'))
@@ -1823,7 +1869,7 @@ class Tester:
 
     def w_carga(self):
         n = self.a.personas_w
-        self.seccion(f'W · {n} personas navegan y confirman a la vez; alerta de saturación (R-34)')
+        self.seccion(f'W · {n} personas navegan y confirman a la vez (llegan en {self.a.rampa_w:g} s); alerta de saturación (R-34)')
         if n <= 0:
             self.omitir('Carga de W y alerta de saturación', 'personas-w = 0')
             return
@@ -1838,6 +1884,7 @@ class Tester:
         dias = self.dias(self.acts())[:2]
 
         def persona(d):
+            time.sleep(random.random() * self.a.rampa_w)   # llegan repartidas en unos segundos (--rampa-w)
             t0 = time.perf_counter()
             for _ in range(random.randint(1, 3)):       # navega como la página: estado con actividades, cada tanto
                 self.cli.llamar({'action': 'estado', 'conActividades': True}, paciente=True)
@@ -2037,12 +2084,20 @@ def main():
     ap.add_argument('--personas', type=int, default=int(os.environ.get('CARGA_PERSONAS') or 150))
     ap.add_argument('--personas-w', type=int, default=int(os.environ.get('CARGA_W') or 1000),
                     help='bloque W: personas que navegan y confirman a la vez (0 = sin el bloque W)')
+    ap.add_argument('--rampa-w', type=float, default=float(os.environ.get('RAMPA_W') or 3),
+                    help='bloque W: las personas llegan repartidas en estos segundos, como en una apertura real (0 = todas en el mismo instante)')
     ap.add_argument('--salida', default='resultados')
     ap.add_argument('--local', action='store_true', help='servidor local: permite simular otra IP')
     ap.add_argument('--dsn', default=os.environ.get('TESTER_DSN') or None,
                     help='conexión directa (local o Supabase, "Session pooler"): privilegios, protección masiva, bitácora, integridad y vaciar (todo se deshace)')
     ap.add_argument('--sin-mascara', action='store_true', help='solo para depurar en local: muestra documentos, nombres, correos y celulares')
     a = ap.parse_args()
+    if os.name == 'nt':                 # Windows limita a 512 los archivos abiertos de un programa: 1000 personas a la vez lo superan
+        try:
+            import ctypes
+            ctypes.cdll.ucrtbase._setmaxstdio(8192)
+        except Exception:  # noqa: BLE001
+            pass
     if not a.api or not a.anon:
         print('⛔ Falta API_URL o ANON_KEY: pégalos en docs/config.js o usa --api y --anon.')
         return 2

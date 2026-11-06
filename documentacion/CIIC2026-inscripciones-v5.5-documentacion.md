@@ -1,10 +1,10 @@
 # Sistema de inscripciones CIIC 2026 · v5.5 · Documentación técnica completa
 
-Fecha: 06-11-2026 · Revisión 8 (Sprint 4) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
+Fecha: 06-11-2026 · Revisión 9 (Sprint 4.1) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
 
 Este documento describe cada pieza del sistema: qué es, qué hace, qué datos recibe y entrega, y qué reglas cumple. Es la referencia para programar, probar, operar y auditar. Los HTML, el SQL y el tester se construyen contra él, por sprints (sección 23).
 
-La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
+La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
 
 Las marcas **[v5.2]**, **[v5.3]**, **[v5.4]** y **[v5.5]** indican en qué versión del contrato cambió cada punto respecto de lo construido en la v5.1. Lo que no tiene marca ya funciona así en el código construido.
 
@@ -1396,6 +1396,7 @@ Ejemplo: respaldo a las 10:00, error a las 11:30. Al restaurar, se pierde lo que
 - **Qué no contiene:** las cuentas de Supabase Auth (contraseñas y códigos), que no se pueden exportar, ni las tablas temporales (intentos, solicitudes, tráfico).
 - **Tamaño:** pocos MB, incluso con miles de inscripciones (medido: la base completa de un congreso grande ocupa unos 24 MB).
 - **Dónde guardarlo:** en una carpeta de tu computadora o en una memoria USB. Nunca en GitHub, en chats ni en correos: tiene datos personales.
+- **Cómo se guarda [Sprint 4.1]:** el panel guarda el texto tal como lo entrega la base, sin volver a escribirlo en el navegador (que cambiaría un `1.50` por `1.5` o un entero de más de 15 dígitos, y la huella dejaría de coincidir).
 
 ### 19.4 Calendario de respaldos
 
@@ -1426,9 +1427,9 @@ Como respaldo adicional, el CSV de todas las listas (nivel 1) te dice quién se 
 
 [Sprint 4] Cómo quedó:
 
-- **Huella:** SHA-256 del texto que PostgreSQL da a cada tabla en jsonb (nativo y rápido: 1,1 s para una base de 25 MB), por tabla y total. `restaurar.py` la reproduce desde el archivo aunque el navegador lo haya vuelto a escribir. Detecta un archivo dañado o modificado sin recalcularla; no es una firma. En estas tablas todos los números son enteros; un número decimal o un entero de más de 15 dígitos dentro de `datos` haría fallar la verificación (falla segura: no restaura).
+- **Huella:** SHA-256 del texto que PostgreSQL da a cada tabla en jsonb (nativo y rápido: 1,1 s para una base de 25 MB), por tabla y total. `restaurar.py` la reproduce desde el archivo aunque se haya vuelto a escribir con otros espacios, y lee los decimales tal cual (`1.50` sigue siendo `1.50`) [Sprint 4.1]. Detecta un archivo dañado o modificado sin recalcularla; no es una firma. Un respaldo guardado con el panel del Sprint 4 que tuviera decimales en `datos` no pasaría la verificación: para esa emergencia, `--aceptar-huella-distinta` restaura si las filas de cada tabla cuadran (siempre con `--simular` primero).
 - **Antes de cambiar nada**, el SQL exige las inscripciones cerradas (y bloquea `config` para que nadie abra mientras tanto) y un esquema igual o más nuevo que el del respaldo. Con `--solo-faltantes`, el mismo modo que el respaldo: un respaldo de PRUEBA no entra en una base en PRODUCCION. Con `--completo`, una base sin padrón, actividades, cruces ni inscripciones.
-- **`--simular`** hace todo y lo deshace: muestra qué volvería. Se usa siempre primero. **`--tablas`** limita qué tablas se devuelven.
+- **`--simular`** hace todo y lo deshace: muestra qué volvería, sin tocar la bitácora ni los contadores de ids. Se usa siempre primero. **`--tablas`** limita qué tablas se devuelven.
 - **`--solo-faltantes` devuelve filas borradas, no repara filas modificadas** (las que existen no se tocan). Una inscripción vuelve entera, con sus actividades, solo si ya no existe: a una inscripción que existe nunca se le agregan actividades, aunque se haya cambiado después del respaldo. Las actividades que vuelven, vuelven **ocultas** y el informe las lista para revisarlas. También vuelve lo que se quitó a propósito después del respaldo (una persona del padrón, una actividad): por eso conviene `--simular` y, si hace falta, `--tablas`.
 - **`--completo`** respeta los valores del respaldo también en `tipos_actividad`, conserva las actividades de inscripciones anuladas aunque la actividad ya no exista, y si la base nueva ya tenía alguna entrada de bitácora (por ejemplo, `asignar_propietario`), la del respaldo con el mismo número entra con un número nuevo.
 - Las cuentas del equipo solo se restauran si su usuario existe en Supabase Auth; en un proyecto nuevo se invitan de nuevo (paso 4). Los contadores de ids solo avanzan. Deja una entrada "Restaurar respaldo" en la bitácora.
@@ -1645,6 +1646,7 @@ Casos que incluye: DNI con cero inicial y sin él, carnet de extranjería, pasap
 | Secretos | Las cadenas de conexión y la clave del tester viven en `.env.local` (excluido por `.gitignore`, prohibido al visor de Claude Code) y en los secretos de GitHub. Nunca en el repositorio ni en el chat |
 | Documentos del tester | Formato `ZQX` + 7 dígitos, que ninguna persona real tiene. `admin_limpiar` solo borra del padrón documentos con ese formato (migración 05) |
 | Respaldo y restauración [Sprint 4] | `panel_respaldo` (migración 08) y `supabase/restaurar.py` (§19.5). Medido en local: con la base ficticia y 720 inscripciones, 1,2 MB en 0,2 s; con una base de 25 MB (43 000 en el padrón, 20 000 entradas de bitácora), 16 MB en 1,1 s. Restauración completa de la base ficticia en 0,4 s |
+| Ensayo por la API real [Sprint 4.1] | `admin_ensayo` (migración 09, solo con la clave del tester y en modo PRUEBA): ejecuta "Pasar a producción" o "Vaciar datos de prueba" **por la API**, con el rol, `safeupdate`, los disparadores y R-40 de Supabase, mide cómo quedó la base y lo deshace todo en la misma llamada. El tester lo corre siempre (bloque AF), también desde GitHub. En PRODUCCIÓN no hay clave del tester: no hace nada |
 | Carga y saturación [Sprint 4] | Bloque W: 1000 personas sintéticas (`ZQX`, importadas con `panel_padron_importar`, que reemplaza al `admin_sembrar` del plan) navegan y confirman a la vez; luego el tester baja el umbral a 100 para ver la ráfaga sin alerta y la alerta sostenida, y lo restaura |
 
 La guía paso a paso está en `sprints/sprint-3/GUIA.md`.
@@ -1673,6 +1675,8 @@ El tester (`tester/tester.py`) prueba el sistema real instalado. En modo complet
 | Q · Carga | 150 personas verifican y confirman a la vez: sin errores, sin sobrecupo, nadie dos veces, 95 % bajo 60 s |
 
 Resultado en local (PostgreSQL 16, dos corridas seguidas): **163 de 163**; carga de 150 con 95 % en 2,0 s, sin reintentos.
+
+[Sprint 4, en Supabase] W con 1000 personas desde GitHub: 18 s en total, de principio a fin p50 13,5 s y p95 15,9 s, confirmar p95 3,9 s, 0 reintentos, sin sobrecupo ni dobles; pico de 2342 llamadas en una ventana, sin alerta (no fueron 3 seguidas). Desde una PC con Windows la carga de 1000 midió la PC (límite de archivos y conexiones TLS), no el sistema: la referencia es la de GitHub. [Sprint 4.1] El tester reutiliza conexiones, amplía el límite de archivos en Windows y reparte la llegada de W en 3 s.
 
 [Sprint 4] Resultado en el entorno de diseño (PostgreSQL 16, con navegador, desde cero y sobre una base 5.5-s3.2 puesta al día): **355 de 355**, 1 omitida (la página publicada, que solo se prueba contra GitHub Pages). W con 1000 personas (seis corridas): de principio a fin p50 2,2 a 8,7 s y p95 3,8 a 10,3 s; confirmar p50 0,5 a 1,6 s y p95 1,1 a 3,0 s; 0 reintentos.
 

@@ -1,0 +1,42 @@
+{
+ "sprint": "sprint-4.1",
+ "siguiente": "en local: instalar.py aplica solo la 09; reinicia el servidor y corre el tester con --web. Luego PRUEBA: instalar.py (solo la 09), commit y push, tester con --dsn y --web (el bloque AF ensaya por la API real), y el tester de GitHub.",
+ "archivos": {
+  "supabase/09_sprint4_ensayo.sql": {
+   "base": null,
+   "nuevo": "7bf395e5bd1b"
+  },
+  "supabase/instalar.py": {
+   "base": "6c1d169abd2e",
+   "nuevo": "c276c321a505"
+  },
+  "supabase/restaurar.py": {
+   "base": "b877bc744f19",
+   "nuevo": "a740adacfd72"
+  },
+  "tester/tester.py": {
+   "base": "3d0b04b30665",
+   "nuevo": "68af3e9aa6a9"
+  },
+  "docs/panel.html": {
+   "base": "1b90b96442a8",
+   "nuevo": "82ce710b8bd6"
+  },
+  "CLAUDE.md": {
+   "base": "c17f4a50dcd9",
+   "nuevo": "d090b1286b13"
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "e226488f2fce",
+   "nuevo": "ef74736a99d9"
+  },
+  "sprints/PLAN.md": {
+   "base": "69af04a258fc",
+   "nuevo": "a32dc946eefb"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "5acafa7672c4",
+   "nuevo": "f1abb8a88ca3"
+  }
+ }
+}
