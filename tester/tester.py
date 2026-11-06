@@ -27,7 +27,9 @@ import json
 import os
 import random
 import re
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -63,15 +65,55 @@ SIN = '__sin__'      # solicitud=SIN: no se envía (para probar que la base la e
 def sin_where(src):
     """Sentencias DELETE/UPDATE sin WHERE en el código de una función (Supabase las rechaza con safeupdate, error 21000).
     Se ignoran comentarios y literales; INSERT … ON CONFLICT DO UPDATE no cuenta (no es un UPDATE)."""
-    txt = re.sub(r'--[^\n]*', ' ', src)
+    txt = re.sub(r'/\*.*?\*/', ' ', src, flags=re.S)
+    txt = re.sub(r'--[^\n]*', ' ', txt)
     txt = re.sub(r"'(?:[^']|'')*'", "''", txt)
     hallados = []
     for seg in txt.split(';'):
         t = ' '.join(seg.lower().split())
-        for m in re.finditer(r'\bdelete\s+from\b|(?<!do )(?<!for )\bupdate\s+(?:only\s+)?[a-z_][a-z0-9_."]*(?:\s+(?:as\s+)?[a-z_]\w*)?\s+set\b', t):
-            if not re.search(r'\bwhere\b', t[m.end():]):
+        for m in re.finditer(r'\bdelete\s+from\b|(?<!do )(?<!for )(?<!key )\bupdate\s+(?:only\s+)?[a-z_][a-z0-9_."]*(?:\s+(?:as\s+)?[a-z_]\w*)?\s+set\b', t):
+            resto = t[m.end():]
+            if m.start() > 0 and t[:m.start()].count('(') > t[:m.start()].count(')'):
+                # dentro de un paréntesis (CTE, subconsulta): su WHERE está hasta el paréntesis que lo cierra
+                prof, fin = 0, len(resto)
+                for i, ch in enumerate(resto):
+                    prof += ch == '('
+                    prof -= ch == ')'
+                    if prof < 0:
+                        fin = i
+                        break
+                resto = resto[:fin]
+            while re.search(r'\([^()]*\)', resto):          # el WHERE de una subconsulta no cuenta: Sprint 3.2, punto ciego
+                resto = re.sub(r'\([^()]*\)', ' ', resto)
+            if not re.search(r'\bwhere\b', resto):
                 hallados.append(t[m.start():m.start() + 70])
     return hallados
+
+
+CASOS_ESCANER = [   # (código, ¿debe detectarse?) · el tester se prueba a sí mismo antes de revisar las funciones
+    ("delete from public.inscripciones;", True),
+    ("delete from public.inscripciones where true;", False),
+    ("update public.config set abierto = false;", True),
+    ("update public.config set abierto = false where id = 1;", False),
+    ("update public.actividades a set inscritos = (select count(*) from x where x.id = a.id);", True),
+    ("update public.actividades a set inscritos = (select count(*) from x where x.id = a.id) where a.id = 'V';", False),
+    ("update t set a = coalesce((select max(b) from u where u.c = t.c), 0);", True),
+    ("delete from public.padron where documento in (select d from t where d like 'Z%');", False),
+    ("delete from public.padron returning (select 1 where true);", True),
+    ("insert into t (a) values (1) on conflict (a) do update set a = excluded.a;", False),
+    ("insert into t (a) values (1) on conflict on constraint t_pk do update set b = 2;", False),
+    ("-- delete from t;\nselect 1;", False),
+    ("/* update t set a = 1; */ select 1;", False),
+    ("perform x('delete from t;');", False),
+    ("with borrar as (delete from t where id = 1 returning id) select count(*) from borrar;", False),
+    ("with borrar as (delete from t returning id) select count(*) from borrar where id > 0;", True),
+    ("update only t set a = 1 where b = 2;", False),
+    ("update t as x set a = 1;", True),
+    ("delete from t using u where t.id = u.id;", False),
+    ("for r in select * from t loop update t set a = r.a where id = r.id; end loop;", False),
+    ("execute format('update %I set a = 1', tbl);", False),
+    ("if exists (select 1 from t where a) then delete from t; end if;", True),
+]
 
 
 class Cliente:
@@ -79,7 +121,7 @@ class Cliente:
         self.url = api.rstrip('/') + '/rest/v1/rpc/api'
         self.anon = anon
         self.ronda = None
-        self.latencias, self.reintentos, self.saturado, self.motivos = [], 0, 0, {}
+        self.latencias, self.reintentos, self.saturado, self.motivos, self.ejemplos = [], 0, 0, {}, {}
         self._c = threading.Lock()
         self.s = requests.Session()
 
@@ -126,6 +168,8 @@ class Cliente:
                 self.reintentos += 1
                 k = f"{d.get('action')}: {ultimo.get('tipo')}" + (f" {ultimo['motivo']}" if ultimo.get('motivo') else '')
                 self.motivos[k] = self.motivos.get(k, 0) + 1
+                if k not in self.ejemplos and ultimo.get('mensaje'):        # la causa del primero de cada tipo, para el reporte
+                    self.ejemplos[k] = re.sub(r'\s+', ' ', str(ultimo['mensaje']))[:160]
             time.sleep(0.5 + random.random() * 1.5 if paciente else 0.6 * i)
         return ultimo
 
@@ -298,7 +342,7 @@ class Tester:
             if e.get('tipo') == 'estado':
                 break
             time.sleep(0.5)
-        self.cli.reintentos, self.cli.motivos = 0, {}      # la espera del arranque no cuenta como reintento
+        self.cli.reintentos, self.cli.motivos, self.cli.ejemplos = 0, {}, {}      # la espera del arranque no cuenta como reintento
         if not self.ok('La API responde', e.get('tipo') == 'estado', 'estado', e.get('tipo'), e.get('mensaje')):
             raise Abortar('La API no responde. Revisa API_URL y ANON_KEY en docs/config.js y que 02_api.sql esté instalado.')
         if not self.ok('Backend v5.5 (Sprint 1 o posterior)', str(e.get('version', '')).startswith('5.5'), '5.5-s1 o mayor', e.get('version')):
@@ -834,6 +878,9 @@ class Tester:
             c.execute("""select n.nspname || '.' || p.proname, p.prosrc from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                          where n.nspname in ('privado', 'public') and p.prolang in (select oid from pg_language where lanname in ('plpgsql', 'sql'))""")
             malas = [f'{nombre}: {x}' for nombre, src in c.fetchall() for x in sin_where(src)]
+            fallos = [f"{'no detectó' if e else 'falso positivo'}: {s[:50]}" for s, e in CASOS_ESCANER if bool(sin_where(s)) != e]
+            self.ok(f'El escáner acierta en sus {len(CASOS_ESCANER)} casos (incluido UPDATE … SET x = (SELECT … WHERE …) sin WHERE propio)',
+                    not fallos, f'{len(CASOS_ESCANER)} de {len(CASOS_ESCANER)}', fallos[:3])
             self.ok('Ninguna función con DELETE o UPDATE sin WHERE (Supabase los rechaza: safeupdate, error 21000)', not malas, 'ninguna', malas[:4])
             c.execute("select prosecdef, array_to_string(proconfig, ',') from pg_proc where oid = 'public.api(jsonb)'::regprocedure")
             sd, cfg = c.fetchone()
@@ -1287,6 +1334,206 @@ class Tester:
         con.close()
         self.ok('Después de deshacer, la base de prueba sigue completa', self.resumen()['totales']['padron']['1'] > 100, '> 100 en Etapa 1', self.resumen()['totales']['padron'])
 
+    # ── respaldo y restauración (R-41, §19.5) ──
+    def _dsn_con_base(self, base):
+        d = self.a.dsn
+        if re.match(r'postgres(ql)?://', d):
+            return re.sub(r'(://[^/?]*)(/[^?]*)?', lambda m: m.group(1) + '/' + base, d, count=1)
+        return d + f' dbname={base}'
+
+    @staticmethod
+    def _python(script, *args):
+        # UTF-8 en la tubería: en Windows la salida capturada sería cp1252 y "✔" haría fallar al programa
+        return subprocess.run([sys.executable, str(RAIZ / 'supabase' / script), *map(str, args)], capture_output=True, text=True, encoding='utf-8',
+                              errors='replace', timeout=300, env={**os.environ, 'PYTHONIOENCODING': 'utf-8'})
+
+    def _restaurar(self, *args):
+        return self._python('restaurar.py', *args)
+
+    def y_respaldo(self):
+        self.seccion('Y · Respaldo y restauración (R-41, §19.5)')
+        self.tipo('Respaldo como admin → sin_permiso (es del propietario)', self.cli.llamar({'action': 'panel_respaldo', 'key': self.key, 'comoRol': 'admin'}), 'sin_permiso')
+        t0 = time.perf_counter()
+        r = self.panel('panel_respaldo')
+        dur = time.perf_counter() - t0
+        tablas = {'config', 'tipos_actividad', 'padron', 'actividades', 'cruces_permitidos', 'inscripciones', 'inscripcion_actividades', 'organizadores', 'bitacora', 'incidencias'}
+        if not self.ok('El propietario descarga el respaldo con las 10 tablas, filas y huellas', r.get('tipo') == 'panel' and set(r.get('tablas', {})) == tablas
+                       and set(r.get('huellas', {})) == tablas and len(str(r.get('huella', ''))) == 64, '10 tablas · huellas', sorted(r.get('tablas', {}))):
+            return
+        print(pinta(GRIS, f"  … respaldo de {len(json.dumps(r)) // 1024} KB en {dur:.1f} s"))
+        res = self.resumen()
+        t = res['totales']
+        self.ok('Las filas del respaldo coinciden con el panel', r['filas']['padron'] == sum(t['padron'].values()) and r['filas']['actividades'] == len(res['actividades'])
+                and r['filas']['inscripciones'] == t['inscritos'] + t['anulados'], 'iguales', r['filas'])
+        u = res.get('ultimoRespaldo') or {}
+        self.ok('El panel muestra el último respaldo (fecha, quién, tamaño)', bool(u.get('fecha')) and 'Tester' in str(u.get('quien')) and u.get('bytes', 0) > 0, 'fecha · Tester · KB', u)
+        with tempfile.TemporaryDirectory() as tmp:            # nunca en resultados/: el respaldo tiene datos personales
+            f = Path(tmp) / 'respaldo.json'
+            f.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding='utf-8')        # como lo guarda el panel
+            v = self._restaurar(f, '--verificar')
+            self.ok('restaurar.py --verificar: huella, filas y versión correctas', v.returncode == 0 and 'íntegro' in v.stdout, 'íntegro', (v.stdout + v.stderr)[-160:])
+            mal = json.loads(json.dumps(r))
+            fila = (mal['tablas']['padron'] or mal['tablas']['tipos_actividad'])[0]
+            fila[next(iter(fila))] = str(fila[next(iter(fila))]) + 'X'
+            g = Path(tmp) / 'editado.json'
+            g.write_text(json.dumps(mal, ensure_ascii=False), encoding='utf-8')
+            v = self._restaurar(g, '--verificar')
+            self.ok('Un respaldo editado no pasa la verificación', v.returncode == 1 and 'huella' in v.stdout, 'rechazado por huella', (v.stdout + v.stderr)[-120:])
+            v = self._restaurar(g, '--completo')
+            self.ok('…ni genera SQL para restaurarlo', v.returncode == 1 and not v.stdout, 'nada', v.stdout[:60])
+            if not (self.a.local and self.a.dsn):
+                self.omitir('Restaurar en una base nueva y devolver filas borradas', 'solo en local con --local y --dsn (crea y borra una base de prueba)')
+                return
+            import psycopg2
+            nueva = 'ciic_y_' + uuid.uuid4().hex[:8]
+            adm = psycopg2.connect(self.a.dsn)
+            adm.autocommit = True
+            with adm.cursor() as c:
+                c.execute(f'create database {nueva}')
+            dsn_y = self._dsn_con_base(nueva)
+            try:
+                y = psycopg2.connect(dsn_y)
+                y.autocommit = True
+                with y.cursor() as c:
+                    c.execute((RAIZ / 'local' / 'supabase_local.sql').read_text(encoding='utf-8'))
+                inst = self._python('instalar.py', '--dsn', dsn_y)
+                if not self.ok('Base nueva instalada con instalar.py (sin datos)', inst.returncode == 0, 'instalada', inst.stdout[-160:] + inst.stderr[-160:]):
+                    y.close()
+                    return
+                t0 = time.perf_counter()
+                v = self._restaurar(f, '--completo', '--dsn', dsn_y)
+                print(pinta(GRIS, f'  … --completo en {time.perf_counter() - t0:.1f} s'))
+                self.ok('restaurar.py --completo en la base nueva', v.returncode == 0, 'aplicada', (v.stdout + v.stderr)[-200:])
+                with y.cursor() as c:
+                    c.execute('select privado.crear_clave_admin()')
+                    k2 = c.fetchone()[0]
+                    c.execute('select public.api(%s::jsonb)', (json.dumps({'action': 'panel_respaldo', 'key': k2}),))
+                    r2 = c.fetchone()[0]
+                    c.execute("select (privado.integridad() ->> 'ok')::boolean, abierto, ronda, modo from public.config where id = 1")
+                    integ, abierto, ronda, modo = c.fetchone()
+                comunes = ['tipos_actividad', 'padron', 'actividades', 'cruces_permitidos', 'inscripciones', 'inscripcion_actividades', 'incidencias']
+                dist = [x for x in comunes if r2['huellas'][x] != r['huellas'][x]]
+                self.ok('Datos restaurados idénticos al respaldo (huella por tabla)', not dist, 'iguales', dist)
+                self.ok('Bitácora: la del respaldo más la entrada de la restauración', r2['filas']['bitacora'] == r['filas']['bitacora'] + 1, r['filas']['bitacora'] + 1, r2['filas']['bitacora'])
+                self.ok('Restaurada cerrada, con la ronda +1, el mismo modo e integridad OK', integ and not abierto and ronda == r['tablas']['config'][0]['ronda'] + 1
+                        and modo == r['tablas']['config'][0]['modo'], 'cerrada · ronda +1 · OK', f'{abierto} · {ronda} · {integ}')
+                self.ok('Las cuentas del equipo no se restauran sin su usuario (se invitan de nuevo)', r2['filas']['organizadores'] == 0, 0, r2['filas']['organizadores'])
+                v = self._restaurar(f, '--completo', '--dsn', dsn_y)
+                self.ok('--completo sobre una base con datos se niega sin cambiar nada', v.returncode == 1 and 'no está vacía' in v.stdout, 'no está vacía', v.stdout[-120:])
+                with y.cursor() as c:                  # pérdida parcial a propósito, y un cambio legítimo hecho después del respaldo
+                    c.execute("""select i.codigo, (select array_agg(ia.actividad_id order by ia.actividad_id) from public.inscripcion_actividades ia where ia.codigo = i.codigo)
+                                 from public.inscripciones i where i.estado = 'CONFIRMADO'
+                                   and (select count(*) from public.inscripcion_actividades ia where ia.codigo = i.codigo) = 2 order by i.codigo desc limit 1""")
+                    cambiada, acts_antes = c.fetchone()
+                    c.execute("""select a.id from public.actividades a where a.tipo = 'TALLER' and a.inscritos < a.cupo and a.id <> all(%s)
+                                   and a.fecha = (select fecha from public.actividades where id = %s) order by a.id limit 1""", (acts_antes, acts_antes[-1]))
+                    fila = c.fetchone()
+                    nueva_act = fila[0] if fila else None
+                    if nueva_act:          # como panel_cambiar: la inscripción pasa a otra actividad
+                        c.execute('update public.inscripcion_actividades set actividad_id = %s where codigo = %s and actividad_id = %s', (nueva_act, cambiada, acts_antes[-1]))
+                    c.execute("""select a.id from public.actividades a where a.publicada
+                                   and not exists (select 1 from public.inscripcion_actividades ia where ia.actividad_id = a.id) order by a.id limit 1""")
+                    fila = c.fetchone()
+                    quitada = fila[0] if fila else None
+                    c.execute("""begin; set local ciic.masivo = 'confirmado';
+                                 delete from public.inscripciones where codigo in (select codigo from public.inscripciones where codigo <> %s order by codigo limit 10);
+                                 delete from public.padron p where p.documento in (select x.documento from public.padron x
+                                   where not exists (select 1 from public.inscripciones i where i.documento = x.documento) order by x.documento desc limit 5);
+                                 delete from public.bitacora where id in (select id from public.bitacora order by id limit 3);
+                                 delete from public.actividades where id = %s; commit;""", (cambiada, quitada))
+                    c.execute('select (select count(*) from public.padron), (select count(*) from public.inscripciones), (select count(*) from public.inscripcion_actividades)')
+                    falta = c.fetchone()
+                    v = self._restaurar(f, '--solo-faltantes', '--simular', '--dsn', dsn_y)
+                    c.execute('select (select count(*) from public.padron), (select count(*) from public.inscripciones), (select count(*) from public.inscripcion_actividades)')
+                    self.ok('--simular muestra qué volvería y no cambia nada', v.returncode == 0 and 'SIMULACIÓN' in v.stdout and 'agregaría' in v.stdout and c.fetchone() == falta,
+                            'informe · sin cambios', (v.stdout + v.stderr)[-160:])
+                    s = Path(tmp) / 'faltantes.sql'
+                    v = self._restaurar(f, '--solo-faltantes', '--salida', s)
+                    c.execute(s.read_text(encoding='utf-8'))          # como en el SQL Editor
+                    inf = {x[0]: x for x in c.fetchall()}
+                    c.execute("select (select count(*) from public.padron), (select count(*) from public.inscripciones), (select count(*) from public.inscripcion_actividades), "
+                              "(privado.integridad() ->> 'ok')::boolean")
+                    *despues, integ = c.fetchone()
+                    esperado = (r['filas']['padron'], r['filas']['inscripciones'], r['filas']['inscripcion_actividades'])
+                    self.ok('--solo-faltantes devuelve lo borrado sin duplicar (SQL Editor)', tuple(despues) == esperado and integ
+                            and inf['inscripciones'][2] == esperado[1] - falta[1], f'{esperado} · integridad OK', f'antes {falta} · después {tuple(despues)} · {integ}')
+                    c.execute('select array_agg(actividad_id order by actividad_id) from public.inscripcion_actividades where codigo = %s', (cambiada,))
+                    ahora = c.fetchone()[0]
+                    esperado_c = sorted(acts_antes[:-1] + [nueva_act]) if nueva_act else acts_antes
+                    self.ok('Una inscripción cambiada después del respaldo queda como está (no recupera su actividad vieja)', ahora == esperado_c, esperado_c, ahora)
+                    if quitada:
+                        c.execute('select publicada from public.actividades where id = %s', (quitada,))
+                        fila = c.fetchone()
+                        self.ok('Una actividad que vuelve, vuelve oculta y figura en el informe', fila is not None and fila[0] is False and quitada in (inf['actividades'][4] or ''),
+                                'oculta · en el informe', f'{fila} · {inf["actividades"][4]}')
+                    c.execute(s.read_text(encoding='utf-8'))
+                    segunda = sum(x[2] for x in c.fetchall() if x[0] != 'config')
+                    self.ok('Correrlo otra vez no agrega nada', segunda == 0, 0, segunda)
+                    c.execute('update public.config set abierto = true where id = 1')
+                    v = self._restaurar(f, '--solo-faltantes', '--dsn', dsn_y)
+                    self.ok('Con las inscripciones abiertas, restaurar se niega', v.returncode == 1 and 'Cierra las inscripciones' in v.stdout, 'cerrar antes', v.stdout[-120:])
+                    c.execute("update public.config set abierto = false, modo = 'PRODUCCION' where id = 1")
+                    v = self._restaurar(f, '--solo-faltantes', '--dsn', dsn_y)
+                    self.ok('Un respaldo de PRUEBA no se mezcla con una base en PRODUCCION', v.returncode == 1 and 'no se mezclan' in v.stdout, 'se niega', v.stdout[-120:])
+                y.close()
+            finally:
+                with adm.cursor() as c:
+                    c.execute('select pg_terminate_backend(pid) from pg_stat_activity where datname = %s and pid <> pg_backend_pid()', (nueva,))
+                    c.execute(f'drop database if exists {nueva}')
+                adm.close()
+
+    # ── pasar a producción (R-43) ──
+    def af_produccion(self):
+        self.seccion('AF · Pasar a producción (R-43)')
+        if not self.estado().get('abierto'):
+            self.abrir()
+        self.tipo('Abierto → requiere_cierre', self.panel('panel_preparar_produccion', llave='PRODUCCION'), 'requiere_cierre')
+        self.tipo('Como admin → sin_permiso (es del propietario)', self.cli.llamar({'action': 'panel_preparar_produccion', 'key': self.key, 'comoRol': 'admin', 'llave': 'PRODUCCION'}), 'sin_permiso')
+        con = self.sql()
+        if not con:
+            self.cerrar()
+            self.tipo('Cerrado y sin la llave → valor_invalido', self.panel('panel_preparar_produccion', llave='otra'), 'valor_invalido')
+            self.abrir()
+            self.omitir('Pasar a producción de verdad', 'requiere --dsn (se hace dentro de una transacción que se deshace)')
+            return
+        with con.cursor() as c:
+            api = lambda **d: (c.execute('select public.api(%s::jsonb)', (json.dumps({'key': self.key, **({'solicitud': str(uuid.uuid4())} if d.get('action') in ESCRITURAS else {}), **d}),)), c.fetchone()[0])[1]
+            c.execute('update config set abierto = false where id = 1')
+            self.tipo('Sin la llave → valor_invalido', api(action='panel_preparar_produccion', llave='otra'), 'valor_invalido')
+            cuenta = ('select (select count(*) from padron), (select count(*) from actividades), (select count(*) from inscripciones), (select count(*) from inscripcion_actividades), '
+                      '(select count(*) from intentos), (select count(*) from privado.trafico), (select count(*) from privado.incidencias), '
+                      '(select coalesce(sum(inscritos), 0) from actividades), (select count(*) from privado.claves where nombre = \'ADMIN_KEY\'), '
+                      '(select modo from config where id = 1), (select accion from bitacora order by id limit 1), (select count(*) from bitacora)')
+            c.execute(cuenta)
+            a0 = c.fetchone()
+            c.execute("select count(*) from padron where privado.es_doc_de_prueba(documento)")
+            zqx = c.fetchone()[0]
+            r = api(action='panel_preparar_produccion', llave='PRODUCCION')
+            c.execute(cuenta)
+            pad, act, ins, ia, intentos, traf, inc, suma, clave, modo, primera, nbit = c.fetchone()
+            self.ok('Responde con las inscripciones de prueba eliminadas', r.get('tipo') == 'panel' and r.get('eliminadas') == a0[2], a0[2], r.get('eliminadas', r.get('tipo')))
+            self.ok('Vacía inscripciones, intentos, tráfico e incidencias', (ins, ia, intentos, traf, inc) == (0, 0, 0, 0, 0), '(0, 0, 0, 0, 0)', (ins, ia, intentos, traf, inc))
+            self.ok('El padrón y las actividades quedan (salvo los documentos del tester, ZQX); los contadores en 0', (pad, act, suma) == (a0[0] - zqx, a0[1], 0)
+                    and r.get('padronPrueba') == zqx, (a0[0] - zqx, a0[1], 0), (pad, act, suma))
+            self.ok('Modo PRODUCCION y la clave del tester desaparece (R-37)', modo == 'PRODUCCION' and clave == 0, 'PRODUCCION · 0', f'{modo} · {clave}')
+            self.ok('La bitácora empieza con "Pasar a producción"', primera == 'Pasar a producción' and nbit <= 2, 'Pasar a producción', f'{primera} ({nbit} entradas)')
+            self.tipo('La clave del tester ya no abre el panel', api(action='panel_resumen'), ['no_autorizado', 'modo_produccion'])
+            c.execute("select user_id from organizadores where rol = 'propietario' and activo limit 1")
+            fila = c.fetchone()
+            if not fila and self.a.local:       # solo en local se crean cuentas en auth.users (dentro de esta transacción)
+                c.execute('insert into auth.users (email) values (%s) returning id', (f'af-{uuid.uuid4().hex[:6]}@ejemplo.com',))
+                fila = c.fetchone()
+                c.execute("insert into organizadores (user_id, nombre, rol) values (%s, 'Propietario AF', 'propietario')", (fila[0],))
+            if fila:
+                c.execute("select set_config('request.jwt.claims', %s, true)", (json.dumps({'role': 'authenticated', 'sub': str(fila[0]), 'aal': 'aal2'}),))
+                self.tipo('Ya en PRODUCCION → modo_produccion', api(action='panel_preparar_produccion', llave='PRODUCCION'), 'modo_produccion')
+            else:
+                self.omitir('Ya en PRODUCCION → modo_produccion', 'sin cuenta de propietario en esta base')
+        con.rollback()                           # nada de esto queda: la base de prueba sigue como estaba
+        con.close()
+        p = self.cli.llamar({'action': 'admin_ping', 'key': self.key})
+        self.ok('Después de deshacer: modo PRUEBA y la clave del tester funciona', p.get('tipo') == 'admin' and p['config']['modo'] == 'PRUEBA', 'admin · PRUEBA', p.get('tipo'))
+
     # ── navegador ──
     def p_navegador(self):
         self.seccion('P · Página y panel en un navegador (v5.5)')
@@ -1390,14 +1637,17 @@ class Tester:
                 self.abrir()
                 pp.click('[data-tab="listas"]')
                 pp.select_option('#l-act', ids[0])
-                pp.wait_for_selector('#l-tabla [data-grupo]', timeout=10000)
+                # Espera la lista de ESA actividad (la de la pestaña puede llegar después): antes, el clic caía en una fila vieja (Sprint 3, GitHub)
+                pp.wait_for_function("(id) => { const f = [...document.querySelectorAll('#l-tabla tr[data-codigo]')];"
+                                     " return f.length > 0 && f.every((x) => x.children[1].textContent === id); }", arg=ids[0], timeout=20000)
                 primero = pp.locator('#l-tabla [data-grupo]').first
-                antes = primero.get_attribute('data-en-grupo')
+                cod, antes = primero.get_attribute('data-grupo'), primero.get_attribute('data-en-grupo')
                 primero.click()
-                pp.wait_for_function(f"document.querySelector('#l-tabla [data-grupo]').getAttribute('data-en-grupo') !== '{antes}'", timeout=10000)
+                marca = "([c, a]) => { const b = document.querySelector('#l-tabla [data-grupo=\"' + c + '\"]'); return !!b && b.getAttribute('data-en-grupo') !== a; }"
+                pp.wait_for_function(marca, arg=[cod, antes], timeout=20000)
                 self.ok('Panel: marcar en el grupo se guarda y se relee', True)
-                pp.locator('#l-tabla [data-grupo]').first.click()
-                pp.wait_for_timeout(800)
+                pp.locator(f'#l-tabla [data-grupo="{cod}"]').click()
+                pp.wait_for_function(marca, arg=[cod, 'true' if antes == 'false' else 'false'], timeout=20000)
                 for t in ('participantes', 'actividades', 'listas', 'sistema'):
                     pp.click(f'[data-tab="{t}"]')
                     pp.wait_for_timeout(700)
@@ -1406,7 +1656,120 @@ class Tester:
             except Exception as e:  # noqa: BLE001
                 self.ok('Navegador sin errores', False, 'sin errores', str(e)[:200])
                 pg.screenshot(path=str(fotos / 'error.png'))
+            self.p_inicio_sesion(nav, web)
+            self.p_publicada(nav, web)
             nav.close()
+
+    SUPABASE_FALSO = """(() => {
+  const UID = '__UID__', K = 'ciic-falso-sesion';
+  const leer = () => { try { return JSON.parse(localStorage.getItem(K)); } catch (e) { return null; } };
+  const poner = (s) => { if (s) localStorage.setItem(K, JSON.stringify(s)); else localStorage.removeItem(K); };
+  window.supabase = { createClient(url, key, o) {
+    // Como supabase-js 2.45: si la URL trae un error (#error=…) y detectSessionInUrl, descarta la sesión guardada.
+    if (o && o.auth && o.auth.detectSessionInUrl && /error/.test(location.hash + location.search)) poner(null);
+    return { auth: {
+      async getSession() { return { data: { session: leer() } }; },
+      async signInWithPassword() { poner({ access_token: 'local:' + UID + ':aal1' }); return { data: {}, error: null }; },
+      async signOut() { poner(null); return {}; },
+      async resetPasswordForEmail() { return {}; },
+      async updateUser() { return { error: null }; },
+      mfa: {
+        async listFactors() { return { data: { totp: [{ id: 'f1', status: 'verified' }] } }; },
+        async enroll() { return { data: null, error: { message: 'sin alta' } }; },
+        async challenge() { return { data: { id: 'c1' }, error: null }; },
+        async verify() { poner({ access_token: 'local:' + UID + ':aal2' }); return { error: null }; },
+      } } };
+  } };
+})();"""
+
+    def p_inicio_sesion(self, nav, web):
+        """Inicio de sesión del panel con Supabase Auth simulado (sin cuentas reales): el aviso de 'sin rol' y el #error de un enlace usado."""
+        if not (self.a.local and self.a.dsn):
+            self.omitir('Panel: inicio de sesión con una cuenta sin rol (Auth simulado)', 'solo en local con --local y --dsn')
+            return
+        import psycopg2
+        con = psycopg2.connect(self.a.dsn)
+        con.autocommit = True
+        with con.cursor() as c:
+            c.execute('insert into auth.users (email) values (%s) returning id', (f'sinrol-{uuid.uuid4().hex[:6]}@ejemplo.com',))
+            uid = str(c.fetchone()[0])
+        cfg = 'window.CIIC_CONFIG = ' + json.dumps({'MODO': 'real', 'API_URL': self.a.api, 'ANON_KEY': self.a.anon, 'NOMBRE_EVENTO': 'Tester',
+                                                    'SUPABASE_JS': 'https://supabase.prueba.invalid/supabase.js', 'SUPABASE_JS_SRI': ''}) + ';'
+        ctx = nav.new_context()
+        ctx.route('**/config.js', lambda r: r.fulfill(status=200, content_type='application/javascript; charset=utf-8', body=cfg))
+        ctx.route('https://supabase.prueba.invalid/**', lambda r: r.fulfill(status=200, content_type='application/javascript', body=self.SUPABASE_FALSO.replace('__UID__', uid)))
+        pp = ctx.new_page()
+        visible = lambda tipo: pp.wait_for_selector(f'#msg-login [data-tipo="{tipo}"]', state='visible', timeout=15000)
+        try:
+            pp.goto(web + 'panel.html')
+            pp.fill('#correo', 'sin.rol@ejemplo.com')
+            pp.fill('#clave', 'una-clave-de-prueba')
+            pp.click('#btn-entrar')
+            pp.wait_for_selector('#paso-codigo:not([hidden])', timeout=15000)
+            pp.fill('#codigo6', '123456')
+            pp.click('#btn-codigo')
+            visible('sin_permiso')
+            self.ok('Panel: tras el código, una cuenta sin rol VE el aviso (Sprint 3: quedaba oculto)', 'rol' in pp.inner_text('#msg-login'), 'aviso visible', pp.inner_text('#msg-login')[:80])
+            pp.goto('about:blank')
+            pp.goto(web + 'panel.html#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired')
+            visible('sin_permiso')
+            self.ok('Panel: con #error en la URL y la sesión guardada, no la pierde y limpia la URL', pp.evaluate('location.hash') == '', 'sin #error', pp.evaluate('location.hash'))
+            pp.evaluate("localStorage.removeItem('ciic-falso-sesion')")
+            pp.goto('about:blank')
+            pp.goto(web + 'panel.html#error=access_denied&error_code=otp_expired')
+            visible('enlace_usado')
+            self.ok('Panel: el enlace de invitación ya usado explica que se entra con correo y contraseña', 'una sola vez' in pp.inner_text('#msg-login'), 'una sola vez', pp.inner_text('#msg-login')[:80])
+        except Exception as e:  # noqa: BLE001
+            self.ok('Panel: inicio de sesión simulado sin errores', False, 'sin errores', str(e)[:200])
+        finally:
+            ctx.close()
+            with con.cursor() as c:
+                c.execute('delete from auth.users where id = %s', (uid,))
+            con.close()
+
+    def config_publicada(self, nav, web):
+        """La página publicada con SU config.js, sin inyectar nada (Sprint 3: una publicación quedó en demo y no se veía)."""
+        ctx = nav.new_context()
+        pg = ctx.new_page()
+        try:
+            pg.goto(web + 'index.html')
+            pg.wait_for_selector('#form-doc', timeout=20000)
+            pg.wait_for_timeout(3000)
+            cfg = pg.evaluate('window.CIIC_CONFIG || {}')
+            demo = pg.evaluate("(() => { const c = document.getElementById('demo-cinta'); return !!c && !c.hidden && c.offsetParent !== null; })()")
+            error = pg.evaluate("[...document.querySelectorAll('[data-tipo=\"config\"], [data-tipo=\"sin_conexion\"]')].filter((x) => x.offsetParent !== null).map((x) => x.textContent).join(' | ')")
+        finally:
+            ctx.close()
+        api = str(cfg.get('API_URL', ''))
+        self.ok('Página publicada en modo real (sin la cinta de demo)', str(cfg.get('MODO', '')).lower() == 'real' and not demo, 'real', cfg.get('MODO'))
+        self.ok('Página publicada con API_URL y ANON_KEY', api.startswith('https://') and 'PEGA_AQUI' not in api + str(cfg.get('ANON_KEY', '')), 'configuradas', api[:40])
+        self.ok('Página publicada responde con su configuración', not error, 'sin error de conexión', error[:100])
+        self.ok('supabase-js con hash de integridad (SRI, §18)', str(cfg.get('SUPABASE_JS_SRI', '')).startswith('sha384-'), 'sha384-…', str(cfg.get('SUPABASE_JS_SRI', ''))[:20])
+        modo = None
+        try:
+            r = requests.post(api.rstrip('/') + '/rest/v1/rpc/api', json={'p': {'action': 'estado'}}, timeout=20,
+                              headers={'apikey': cfg.get('ANON_KEY', ''), **({'Authorization': 'Bearer ' + cfg['ANON_KEY']} if str(cfg.get('ANON_KEY', '')).startswith('eyJ') else {})})
+            modo = r.json().get('modo')
+        except Exception:  # noqa: BLE001
+            pass
+        destino = 'al proyecto que prueba este tester' if api.rstrip('/') == self.a.api.rstrip('/') else 'a otro proyecto'
+        print(pinta(GRIS, f'  … la página publicada apunta {destino} (modo {modo})'))
+        corchetes = re.findall(r'\[[^\]\n]{3,60}\]', str(cfg.get('AVISO_PRIVACIDAD', '')))
+        if modo == 'PRODUCCION':
+            self.ok('Aviso de privacidad completo, sin [corchetes] (D6, §11.3)', not corchetes, 'completo', corchetes[:3])
+        elif corchetes:
+            self.omitir('Aviso de privacidad completo', f'aún con {len(corchetes)} [corchetes]: completarlo antes de la apertura (Sprint 6)')
+        else:
+            self.ok('Aviso de privacidad completo, sin [corchetes] (D6, §11.3)', True)
+
+    def p_publicada(self, nav, web):
+        if re.search(r'//(127\.0\.0\.1|localhost)[:/]', web):
+            self.omitir('Página publicada con su propio config.js', 'solo contra la página publicada (GitHub Pages)')
+            return
+        try:
+            self.config_publicada(nav, web)
+        except Exception as e:  # noqa: BLE001
+            self.ok('Página publicada con su propio config.js', False, 'carga', str(e)[:200])
 
     def q_carga(self):
         n = self.a.personas
@@ -1458,6 +1821,117 @@ class Tester:
         self.ok('Nadie quedó inscrito dos veces', len(docs_conf) == len(set(docs_conf)), 'únicos', len(docs_conf) - len(set(docs_conf)))
         self.config(etapas=[1, 2], etapasVisita=[1])
 
+    def w_carga(self):
+        n = self.a.personas_w
+        self.seccion(f'W · {n} personas navegan y confirman a la vez; alerta de saturación (R-34)')
+        if n <= 0:
+            self.omitir('Carga de W y alerta de saturación', 'personas-w = 0')
+            return
+        docs = [self.doc_prueba() for _ in range(n)]          # padrón sintético (ZQX…): admin_limpiar lo borra al final
+        r = self.panel('panel_padron_importar', filas=[{'documento': d, 'etapa': '1'} for d in docs])
+        if not self.ok(f'Padrón sintético de {n} personas (ZQX, se borra al final)', r.get('agregados') == n, n, r.get('agregados', r.get('tipo'))):
+            return
+        self.config(etapas=[1, 2], etapasVisita=[1, 2])
+        for x in self.acts().values():          # cupo de sobra en los talleres (limpiar() lo restaura)
+            if x['publicada'] and x['tipo'] == 'TALLER':
+                self.panel('panel_actividad', id=x['id'], cupo=x['cupo'] + n)
+        dias = self.dias(self.acts())[:2]
+
+        def persona(d):
+            t0 = time.perf_counter()
+            for _ in range(random.randint(1, 3)):       # navega como la página: estado con actividades, cada tanto
+                self.cli.llamar({'action': 'estado', 'conActividades': True}, paciente=True)
+                time.sleep(random.random() * 0.4)
+            v = self.cli.llamar({'action': 'verificar', 'dni': d}, paciente=True)
+            if v.get('tipo') != 'ok':
+                return v.get('tipo'), 0, 0, []
+            ops = [x for x in v.get('actividades', []) if x['disponibles'] > 0]
+            v1 = [x['id'] for x in ops if x['fecha'] == dias[0] and (x['tipo'] == 'TALLER' or v.get('puedeVisita'))]
+            v2 = [x['id'] for x in ops if x['fecha'] == dias[1] and x['tipo'] == 'TALLER']
+            if not v1 or not v2:
+                return 'sin_opciones', 0, 0, []
+            t1 = time.perf_counter()
+            ids = [random.choice(v1), random.choice(v2)]
+            r = self.reg(d, ids, ronda=v['ronda'], paciente=True)
+            return r.get('tipo'), time.perf_counter() - t0, time.perf_counter() - t1, ids
+
+        t0 = time.perf_counter()
+        with cf.ThreadPoolExecutor(n) as ex:
+            rs = list(ex.map(persona, docs))
+        dur = time.perf_counter() - t0
+        tipos = [x[0] for x in rs]
+        tot = sorted(x[1] for x in rs if x[1])
+        con = sorted(x[2] for x in rs if x[2])
+        pct = lambda l, q: l[max(int(len(l) * q) - 1, 0)] if l else 0
+        print(pinta(GRIS, f"  … {dur:.0f} s · registradas {tipos.count('registrado')} · llenas {tipos.count('lleno')} · otras {len(tipos) - tipos.count('registrado') - tipos.count('lleno')}"
+                          f" · de principio a fin p50 {pct(tot, .5):.1f} s, p95 {pct(tot, .95):.1f} s · confirmar p50 {pct(con, .5):.1f} s, p95 {pct(con, .95):.1f} s"))
+        self.ok('Nadie termina con error', set(tipos) <= {'registrado', 'lleno', 'combinacion_invalida'}, 'registrado o lleno', sorted(set(tipos) - {'registrado', 'lleno', 'combinacion_invalida'}))
+        acts = self.acts()
+        falsos = [x[3] for x in rs if x[0] == 'lleno' and not any(acts[i]['inscritos'] >= acts[i]['cupo'] for i in x[3])]
+        self.ok('Cada "lleno" corresponde a una actividad que de verdad se llenó', not falsos, 'ninguno falso', falsos[:3])
+        self.ok('Quien eligió talleres con cupo de sobra quedó inscrito', all(x[0] == 'registrado' for x in rs
+                if x[3] and all(acts[i]['tipo'] == 'TALLER' for i in x[3])), 'todos', '')
+        self.ok('Ninguna actividad con sobrecupo', all(a['inscritos'] <= a['cupo'] for a in acts.values()), 'ninguna', [a['id'] for a in acts.values() if a['inscritos'] > a['cupo']])
+        reg = self.panel('panel_registros')
+        i_doc, i_est = reg['encabezados'].index('Documento'), reg['encabezados'].index('Estado')
+        conf = [f[i_doc] for f in reg['filas'] if f[i_est] == 'CONFIRMADO']
+        self.ok('Nadie quedó inscrito dos veces', len(conf) == len(set(conf)), 'únicos', len(conf) - len(set(conf)))
+        self.ok('Integridad de contadores después de la carga', self.resumen()['integridad']['ok'], 'OK', self.resumen()['integridad'])
+        self.ok('95 % con respuesta en menos de 60 s', pct(tot, .95) < 60, '< 60 s', f'{pct(tot, .95):.1f} s')
+        self.config(etapas=[1, 2], etapasVisita=[1])
+        self.w_trafico()
+
+    def w_trafico(self):
+        """R-34 con el umbral bajado por el tester: una ráfaga de una ventana no alerta; 3 ventanas seguidas, sí."""
+        u0 = self.cfg0.get('umbral', 2000)
+        umbral = 100
+        print(pinta(GRIS, '  … 31 s de calma para que la carga anterior no cuente (ventanas de 10 s)'))
+        time.sleep(31)
+        r = self.config(umbral=umbral)
+        if not self.ok(f'El propietario baja el umbral a {umbral}', r.get('tipo') == 'panel' and r['config'].get('umbral') == umbral, umbral, r.get('config', {}).get('umbral', r.get('tipo'))):
+            return
+        self.tipo('Cambiar el umbral como admin → sin_permiso (nivel 3)', self.cli.llamar({'action': 'panel_config', 'key': self.key, 'comoRol': 'admin', 'umbral': 500}), 'sin_permiso')
+        self.tipo('Umbral fuera de rango → valor_invalido', self.panel('panel_config', umbral=50), 'valor_invalido')
+        t0 = time.perf_counter()
+        with cf.ThreadPoolExecutor(20) as ex:                  # ráfaga: 3 veces el umbral, todo lo rápido posible
+            list(ex.map(lambda _: self.cli.llamar({'action': 'estado'}), range(3 * umbral)))
+        rafaga = time.perf_counter() - t0
+        vio = []
+        fin = time.time() + 32
+        while time.time() < fin:                               # 3 ventanas más, mirando el panel cada 5 s (2 llamadas por ventana)
+            tr = self.resumen().get('trafico', {})
+            vio.append(bool(tr.get('alerta')))
+            time.sleep(5)
+        if rafaga < 12:
+            self.ok(f'Una ráfaga de {3 * umbral} llamadas en {rafaga:.1f} s no enciende la alerta', not any(vio), 'sin alerta', vio)
+        else:
+            self.omitir('Ráfaga sin alerta', f'la ráfaga tardó {rafaga:.0f} s: no cabe en una o dos ventanas')
+        alto = threading.Event()
+
+        def sostener():
+            while not alto.is_set():
+                self.cli.llamar({'action': 'estado'})
+
+        t0 = time.time()
+        with cf.ThreadPoolExecutor(12) as ex:                  # ritmo sostenido muy por encima del umbral durante 4 ventanas y media
+            for _ in range(12):
+                ex.submit(sostener)
+            time.sleep(45)
+            alto.set()
+        tr = self.resumen().get('trafico', {})
+        print(pinta(GRIS, f"  … tráfico: ventana actual {tr.get('ventana10s')} · pico {tr.get('pico10s')} por ventana de 10 s"))
+        self.ok('Sostenido 3 ventanas sobre el umbral → alerta en el panel', tr.get('alerta') is True, 'alerta', tr)
+        self.ok('El pico por ventana se informa', (tr.get('pico10s') or 0) > umbral, f'> {umbral}', tr.get('pico10s'))
+        con = self.sql()
+        if con:
+            with con.cursor() as c:
+                c.execute("select count(*) from bitacora where accion = 'Alerta de saturación' and creado_en > to_timestamp(%s)", (t0 - 5,))
+                self.ok('La alerta queda en la bitácora', c.fetchone()[0] >= 1, '≥ 1', '')
+            con.rollback()
+            con.close()
+        r = self.config(umbral=u0)
+        self.ok('El umbral vuelve a su valor', r.get('config', {}).get('umbral') == u0, u0, r.get('config', {}).get('umbral'))
+
     def limpiar(self):
         self.seccion('Limpieza (deja todo como estaba)')
         r = self.cli.llamar({'action': 'admin_limpiar', 'key': self.key, 'docs': sorted(self.usados), 'padron': sorted(self.padron_nuevo), 'intentos': True})
@@ -1473,7 +1947,7 @@ class Tester:
             self.panel('panel_editar', id=i, grupoModo=a0['grupoModo'], grupo=a0['grupo'], descripcion=a0['descripcion'])
         c = self.cfg0
         self.panel('panel_config', etapas=c['etapas'], etapasVisita=c['etapasVisita'], dosTalleres=c['dosTalleres'], pasoCupo=c['pasoCupo'],
-                   refresco=c['refresco'], limiteDispositivo=c['limiteDispositivo'], limiteRed=c['limiteRed'])
+                   refresco=c['refresco'], limiteDispositivo=c['limiteDispositivo'], limiteRed=c['limiteRed'], **({'umbral': c['umbral']} if 'umbral' in c else {}))
         self.panel('panel_horarios', mismoDia=c['mismoDia'], margenMin=c['margenMin'])
         if c['abierto']:
             self.abrir()
@@ -1488,14 +1962,29 @@ class Tester:
         self.ok('Inscritos como al inicio', all(fin[i]['inscritos'] == a['inscritos'] for i, a in self.acts0.items()), 'iguales', '')
         self.ok('Las actividades del tester se quitaron', not any(i in fin for i in self.creadas), 'quitadas', [i for i in self.creadas if i in fin])
         p = self.cli.llamar({'action': 'admin_ping', 'key': self.key})['config']
-        claves = ('abierto', 'etapas', 'etapasVisita', 'dosTalleres', 'mismoDia', 'margenMin', 'pasoCupo', 'refresco', 'limiteDispositivo', 'limiteRed')
-        self.ok('Configuración como al inicio (la ronda queda más alta)', all(p[k] == c[k] for k in claves), 'igual', {k: p[k] for k in claves if p[k] != c[k]})
+        claves = [k for k in ('abierto', 'etapas', 'etapasVisita', 'dosTalleres', 'mismoDia', 'margenMin', 'pasoCupo', 'refresco', 'limiteDispositivo',
+                              'limiteRed', 'umbral') if k in c]
+        self.ok('Configuración como al inicio (la ronda queda más alta)', all(p.get(k) == c[k] for k in claves), 'igual', {k: p.get(k) for k in claves if p.get(k) != c[k]})
 
     def lectura(self):
         self.a_conexion(solo_lectura=True)
         self.seccion('Lectura · página')
         r = self.api(action='verificar', dni='1')
         self.tipo('Formato inválido responde formato', r, 'formato')
+        if self.a.web:                      # en la apertura: la página publicada con su config.js (no cambia nada)
+            self.seccion('Lectura · página publicada')
+            try:
+                from playwright.sync_api import sync_playwright
+            except ImportError:
+                self.omitir('Página publicada', 'falta playwright')
+                return
+            with sync_playwright() as pw:
+                nav = pw.chromium.launch()
+                try:
+                    self.config_publicada(nav, self.a.web.rstrip('/') + '/')
+                except Exception as e:  # noqa: BLE001
+                    self.ok('Página publicada con su propio config.js', False, 'carga', str(e)[:200])
+                nav.close()
 
     def reporte(self, error, dur):
         pasan = sum(1 for r in self.res if r['ok'] is True)
@@ -1510,10 +1999,13 @@ class Tester:
                else pinta(ROJO, f'  ❌ {fallan} de {pasan + fallan} pruebas fallaron.')) + (f' ({omit} omitidas)' if omit else ''))
         print(f'  Duración: {int(dur // 60)} min {int(dur % 60)} s · Respuesta promedio de la API: {prom:.2f} s · Llamadas: {len(lat)} · Reintentos: {self.cli.reintentos}'
               + (' (' + ', '.join(f'{k} ×{v}' for k, v in sorted(self.cli.motivos.items())) + ')' if self.cli.motivos else ''))
+        for k, v in sorted(self.cli.ejemplos.items()):
+            print(pinta(GRIS, f'  · primer {k}: {self.mascara(v)}'))
         print(pinta(AZUL, '═' * 70))
-        (self.salida / 'resultados.json').write_text(json.dumps({'pasan': pasan, 'fallan': fallan, 'omitidas': omit, 'error': error, 'pruebas': self.res},
+        (self.salida / 'resultados.json').write_text(json.dumps({'pasan': pasan, 'fallan': fallan, 'omitidas': omit, 'error': error, 'reintentos': self.cli.motivos,
+                                                                 'causas': {k: self.mascara(v) for k, v in self.cli.ejemplos.items()}, 'pruebas': self.res},
                                                                 ensure_ascii=False, indent=1), encoding='utf-8')
-        md = ['# Reporte del tester · v5.5 (Sprint 3)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
+        md = ['# Reporte del tester · v5.5 (Sprint 4)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
         if error:
             md += [f'> ⛔ {error}', '']
         md += ['| | Bloque | Prueba | Esperado | Obtenido |', '|---|---|---|---|---|']
@@ -1543,6 +2035,8 @@ def main():
     ap.add_argument('--web', default=os.environ.get('WEB_URL') or None)
     ap.add_argument('--modo', default=os.environ.get('MODO') or 'completo')
     ap.add_argument('--personas', type=int, default=int(os.environ.get('CARGA_PERSONAS') or 150))
+    ap.add_argument('--personas-w', type=int, default=int(os.environ.get('CARGA_W') or 1000),
+                    help='bloque W: personas que navegan y confirman a la vez (0 = sin el bloque W)')
     ap.add_argument('--salida', default='resultados')
     ap.add_argument('--local', action='store_true', help='servidor local: permite simular otra IP')
     ap.add_argument('--dsn', default=os.environ.get('TESTER_DSN') or None,
@@ -1553,7 +2047,7 @@ def main():
         print('⛔ Falta API_URL o ANON_KEY: pégalos en docs/config.js o usa --api y --anon.')
         return 2
     t = Tester(a)
-    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 3.2) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
+    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 4) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
     inicio, error = time.perf_counter(), None
     try:
         if a.modo == 'lectura':
@@ -1567,7 +2061,8 @@ def main():
                           t.j_intentos, t.k_soporte, t.l_whatsapp, t.m_roles, t.n_padron_catalogo, t.o_equipo,
                           t.s_comprobantes, t.x_incidencias, t.ab_niveles, t.r_privilegios, t.r_ip_real, t.z_equipo, t.ad_masiva, t.ag_bitacora,
                           t.t_carreras, t.u_idempotencia, t.ai_ambito, t.v_integridad, t.aa_listas, t.ac_padron_minimo, t.ah_correo_panel,
-                          t.ae_importar_padron, t.ak_importar_actividades, t.aj_vaciar, t.p_navegador, t.q_carga):
+                          t.ae_importar_padron, t.ak_importar_actividades, t.aj_vaciar, t.y_respaldo, t.af_produccion,
+                          t.p_navegador, t.q_carga, t.w_carga):
                     try:
                         b()
                     except Abortar:

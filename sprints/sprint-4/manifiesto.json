@@ -1,0 +1,62 @@
+{
+ "sprint": "sprint-4",
+ "siguiente": "en local: instalar.py aplica solo la 08; reinicia el servidor y corre el tester con --web. Luego PRUEBA: instalar.py (solo la 08), commit y push, tester con --dsn y --web, y los flujos de GitHub (LEEME, pasos 2 a 4).",
+ "archivos": {
+  "supabase/08_sprint4_operacion.sql": {
+   "base": null,
+   "nuevo": "ca60313df776"
+  },
+  "supabase/restaurar.py": {
+   "base": null,
+   "nuevo": "b877bc744f19"
+  },
+  "supabase/instalar.py": {
+   "base": "42dcd02ed188",
+   "nuevo": "6c1d169abd2e"
+  },
+  "tester/tester.py": {
+   "base": "c9ca307c89f8",
+   "nuevo": "3d0b04b30665"
+  },
+  "docs/panel.html": {
+   "base": "c112167e156a",
+   "nuevo": "1b90b96442a8"
+  },
+  "docs/LEEME-DISENO.md": {
+   "base": "d68ce852ae39",
+   "nuevo": "13e2fabc7bde"
+  },
+  ".github/workflows/tester.yml": {
+   "base": "a34d51606a7f",
+   "nuevo": "f8ce891e64dc"
+  },
+  ".gitignore": {
+   "base": "aeff03959358",
+   "nuevo": "07bd60406183"
+  },
+  "CLAUDE.md": {
+   "base": "f8ef91e89ade",
+   "nuevo": "c17f4a50dcd9"
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "b25cfc3bbd66",
+   "nuevo": "e226488f2fce"
+  },
+  ".claude/skills/sql-ciic-inscripciones/SKILL.md": {
+   "base": "9afbf230f363",
+   "nuevo": "a1e6e9f1d013"
+  },
+  "sprints/PLAN.md": {
+   "base": "0dda64eb0c84",
+   "nuevo": "69af04a258fc"
+  },
+  "sprints/sprint-3/GUIA.md": {
+   "base": "a5b06b59b51e",
+   "nuevo": "426ab38b782e"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "a69c197906e9",
+   "nuevo": "5acafa7672c4"
+  }
+ }
+}

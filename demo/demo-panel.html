@@ -181,8 +181,8 @@ input.corto, select.corto { width: 90px; }
  *  ───────────────────────────────────────────────────────────────────── */
 window.CIIC_CONFIG = {
   MODO: 'demo',
-  API_URL: 'PEGA_AQUI_LA_URL_DE_SUPABASE',
-  ANON_KEY: 'PEGA_AQUI_LA_CLAVE_ANON',
+  API_URL: 'https://hbnrhrmndadciornanbx.supabase.co',
+  ANON_KEY: 'sb_publishable_it4qsCUK2UeX5Q5sU5WVzw_mOnF-gBW',
   NOMBRE_EVENTO: 'Congreso Internacional de Ingeniería Civil 2026',
   CONTACTO: '',   // opcional: correo o WhatsApp de informes, p. ej. 'visitas@congreso.pe'
   // Texto completo del aviso de privacidad (sección 11.3 de la documentación). Completa los corchetes.
@@ -1228,6 +1228,12 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
   const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
   const flujoClave = /type=(recovery|invite)/.test(location.hash);
+  const errorEnlace = (() => {      // p. ej. #error=access_denied&error_code=otp_expired al reabrir una invitación ya usada
+    const h = new URLSearchParams(location.hash.replace(/^#/, '')), q = new URLSearchParams(location.search);
+    const c = h.get('error_code') || q.get('error_code') || h.get('error') || q.get('error');
+    if (c) history.replaceState(null, '', location.pathname);
+    return c;
+  })();
   let sb = null, prueba = null, demoSesion = null, datos = null, rol = null, tRefresco = null, pagina = 1;
 
   // ── Llamada a la API: lecturas se reintentan; escrituras solo con la MISMA solicitud (R-32) ──
@@ -1263,7 +1269,7 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
   }
 
   // ── Avisos, ventana de advertencia y descargas ──
-  const ESTILO = { panel: 'exito', registrado: 'exito', advertencia: 'aviso', requiere_cierre: 'aviso', sin_cambios: 'info', ocupado: 'aviso', info: 'info' };
+  const ESTILO = { panel: 'exito', registrado: 'exito', advertencia: 'aviso', enlace_usado: 'aviso', requiere_cierre: 'aviso', sin_cambios: 'info', ocupado: 'aviso', info: 'info' };
   function aviso(r, texto) {
     const c = $('avisos'); c.textContent = '';
     if (!r) return;
@@ -1311,7 +1317,10 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
   async function entrar() {
     const r = await api('panel_resumen');
     if (r.tipo === 'falta_codigo') return pedirCodigo();
-    if (r.tipo !== 'panel') { mensaje($('msg-login'), r); return mostrar('login'); }
+    if (r.tipo !== 'panel') {          // sin rol, desactivada, clave mala…: el aviso va en un paso visible, nunca en uno oculto
+      if (DEMO) { mostrar('login'); return aviso(r); }
+      pasoLogin('paso-clave'); return mensaje($('msg-login'), r);
+    }
     datos = r; rol = r.sesion.rol;
     $('sesion').textContent = r.sesion.nombre + ' · ' + rol + (DEMO ? ' (demo)' : r.sesion.tester ? ' (modo prueba)' : '');
     aplicarNivel(); mostrar('app'); pintar(); programar();
@@ -1664,10 +1673,12 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
   });
 
   // ── Listas por actividad (nivel 1) ──
-  let ultimaLista = null;
+  let ultimaLista = null, nLista = 0;
   async function cargarLista() {
     if (!datos) return;
+    const n = ++nLista;
     const r = await api('panel_lista', { id: $('l-act').value || null, etapa: $('l-etapa').value || null, q: $('l-q').value.trim() });
+    if (n !== nLista) return;          // llegó otra carga después (cambiaste de actividad): se pinta solo la más reciente
     const res = $('l-res'); res.textContent = '';
     if (!r.ok) return mensaje($('l-aviso'), r);
     ultimaLista = r;
@@ -1905,11 +1916,15 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
       return;
     }
     if (!/^https?:\/\//.test(API) || !ANON || /PEGA_AQUI/.test(API + ANON)) return mensaje($('msg-login'), { tipo: 'config', mensaje: 'Falta configurar el sistema: pega API_URL y ANON_KEY en config.js, o usa MODO: "demo".' });
+    api('estado').then((e) => { if (e && e.modo === 'PRODUCCION') $('paso-prueba').hidden = true; });   // R-37: ya no hay clave de prueba
     try { await cargarScript(CFG.SUPABASE_JS || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'); } catch (e) { return; }   // sin supabase-js queda la clave de prueba
     sb = window.supabase.createClient(API, ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
     const { data } = await sb.auth.getSession();
     if (flujoClave && data.session) return pasoLogin('paso-nueva');
-    if (data.session) entrar();
+    if (data.session) return entrar();
+    if (errorEnlace) mensaje($('msg-login'), { tipo: 'enlace_usado', mensaje: errorEnlace === 'otp_expired'
+      ? 'El enlace del correo ya se usó o venció: sirve una sola vez. Entra con tu correo y tu contraseña. Si todavía no creaste tu contraseña, pide al propietario que te invite de nuevo.'
+      : 'El enlace del correo no es válido. Entra con tu correo y tu contraseña, o pide al propietario una invitación nueva.' });
   })();
 })();
 </script>

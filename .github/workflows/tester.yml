@@ -16,6 +16,10 @@ on:
         description: "Personas que se inscriben a la vez en la prueba de carga (0 = sin carga)"
         type: string
         default: "150"
+      personas_w:
+        description: "Bloque W: personas sintéticas que navegan y confirman a la vez, y alerta de saturación (0 = sin el bloque W)"
+        type: string
+        default: "1000"
       web_url:
         description: "URL de la página (vacía = la de GitHub Pages de este repositorio)"
         type: string
@@ -63,6 +67,7 @@ jobs:
           ANON_KEY: ${{ vars.PRUEBA_ANON_KEY }}
           MODO: ${{ inputs.modo }}
           CARGA_PERSONAS: ${{ inputs.personas }}
+          CARGA_W: ${{ inputs.personas_w }}
           ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
           WEB_URL: ${{ inputs.web_url != '' && inputs.web_url || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
         run: python tester/tester.py --salida resultados

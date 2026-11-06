@@ -14,10 +14,11 @@ El código pesado se escribe en otra conversación (la de diseño) y llega listo
 3. **Base local desde cero**, siempre, para que la prueba sea limpia:
    ```bash
    dropdb --if-exists ciic && createdb ciic
-   for f in local/supabase_local.sql supabase/01_esquema.sql supabase/02_api.sql supabase/0[3-9]_*.sql local/datos_prueba.sql; do
-     [ -f "$f" ] && psql -d ciic -v ON_ERROR_STOP=1 -q -f "$f" || { echo "FALLÓ $f"; break; }
-   done
+   psql -d ciic -q -f local/supabase_local.sql
+   python supabase/instalar.py --dsn "dbname=ciic" --datos local/datos_prueba.sql      # todas las migraciones, en una transacción
    CLAVE=$(psql -d ciic -tAc "select privado.crear_clave_admin();")
+   ```
+   Para probar además la puesta al día (lo que pasará en Supabase): sobre la base del sprint anterior, `python supabase/instalar.py --dsn "dbname=ciic" --verificar` (debe listar solo lo nuevo) y luego sin `--verificar`.
    ```
 4. **Servidor y tester:**
    ```bash
@@ -25,8 +26,9 @@ El código pesado se escribe en otra conversación (la de diseño) y llega listo
    # sin pausa fija: el tester y medir_local.py esperan hasta 30 s a que el servidor responda
    python tester/tester.py --api http://127.0.0.1:8787 --anon local --key "$CLAVE" --local --dsn "dbname=ciic" \
      --web http://127.0.0.1:8787/ --personas 150 --salida /tmp/r > /tmp/tester.log 2>&1
-   grep -E "FALLA|OMITE|pruebas|Duración|⛔" /tmp/tester.log
+   grep -E "FALLA|OMITE|pruebas|Duración|⛔|… " /tmp/tester.log
    ```
+   Desde el Sprint 4 el bloque W inscribe además 1000 personas sintéticas y prueba la alerta de saturación (unos 2 minutos más; `--personas-w 0` lo salta en corridas rápidas, nunca en la de aceptación). Las líneas "… " traen las mediciones (p50 y p95) que van al reporte; si hubo reintentos, el final del registro dice la causa del primero de cada tipo.
    Para leer solo las fallas: `grep -A2 "FALLA" /tmp/tester.log`. No pegues el registro completo.
    El tester enmascara documentos, nombres, correos, celulares y códigos en lo que imprime y guarda. Solo para depurar en local: `--sin-mascara`.
    Desde el Sprint 2 el navegador va siempre (`--web`): requiere `pip install playwright` y `python -m playwright install chromium`.
@@ -43,7 +45,7 @@ El código pesado se escribe en otra conversación (la de diseño) y llega listo
 ```
 SPRINT N · <fecha>
 Instalación: OK | FALLÓ <archivo:línea · error>
-Tester: <pasan>/<total> · omitidas <n> · <duración> · p95 carga <s>
+Tester: <pasan>/<total> · omitidas <n> · <duración> · p95 carga <s> · W: p50/p95 de principio a fin y al confirmar · reintentos <n> (causa)
 Fallas:
   - <bloque> · <prueba> · esperado <x> · obtenido <y> · <detalle corto>
 Arreglos hechos aquí:

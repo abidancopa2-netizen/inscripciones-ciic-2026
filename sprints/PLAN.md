@@ -52,7 +52,7 @@
 
 ---
 
-## Sprint 3 · Proyecto real · 07/11 · Fases A y C en PRUEBA (corrección 3.2: compatible con safeupdate de Supabase) · PRODUCCIÓN pendiente
+## Sprint 3 · Proyecto real · 07/11 · ✅ cerrado el 06/11 (PRUEBA en verde en Supabase y GitHub; PRODUCCIÓN instalada vacía)
 
 Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/sprint-3/GUIA.md`.
 
@@ -71,7 +71,7 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 
 ---
 
-## Sprint 4 · Carga y operación · 08/11
+## Sprint 4 · Carga y operación · 08/11 · entregado el 06/11 (migración 08)
 
 | # | Tarea | Doc | Demo |
 |---|---|---|---|
@@ -80,9 +80,10 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 | 4.3 | **Tráfico**: secuencia `privado.llamadas`, tabla `privado.trafico` por ventana de 10 s, alerta sostenida en 3 ventanas, limpieza a los 2 días; `panel_resumen.trafico`; `config.umbral` (nivel 3) | R-34, §15.14 | `contarLlamada`, `trafico` |
 | 4.4 | **Respaldo**: `panel_respaldo` (nivel 3) y `supabase/restaurar.py` (`--verificar`, `--completo`, `--solo-faltantes`) | R-41, §19.3–19.5 | `respaldo` |
 | 4.5 | **Pasar a producción**: `panel_preparar_produccion` (nivel 3). Sus borrados masivos con `where true` (safeupdate, Sprint 3.2) | R-43 | `panel_preparar_produccion` |
-| 4.6 | **Carga de 1000**: `admin_sembrar` (padrón sintético) y bloque W con 1000 personas; el tester baja el umbral para ver la alerta y lo restaura | §22 | — |
+| 4.6 | **Carga de 1000**: padrón sintético (`ZQX`, con `panel_padron_importar` en una llamada: no hizo falta `admin_sembrar`) y bloque W con 1000 personas; el tester baja el umbral para ver la alerta y lo restaura | §22 | — |
 | 4.7 | **Simulacro de restauración**: bloque Y | §19.5 | — |
-| 4.8 | Tester: bloques W, X, Y y AF | §22 | — |
+| 4.8 | Tester: bloques W, Y y AF (X ya está desde el Sprint 1) | §22 | — |
+| 4.9 | Del reporte del Sprint 3: aviso oculto tras el código y `#error` del enlace usado en el panel; escáner con subconsulta; marcar en el grupo sin carrera; página publicada sin inyectar `config.js`; causa de cada reintento en el reporte | — | — |
 
 **Aceptación.** Tester completo en verde en local y en el proyecto de prueba; P95 de la carga anotado; restauración completa y parcial comprobadas.
 

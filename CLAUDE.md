@@ -16,12 +16,14 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 
 | Ruta | Qué es |
 |---|---|
-| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql`, …) |
+| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql` … `08_sprint4_operacion.sql`) |
+| `supabase/instalar.py` | Instala o pone al día una base: aplica solo las migraciones pendientes, todas en una transacción (registro `privado.migraciones`) |
+| `supabase/restaurar.py` | Restaura un respaldo del panel: `--verificar`, `--solo-faltantes`, `--completo` (documentación §19.5) |
 | `local/armar_demos.py` | Arma `demo/*.html` (un archivo por página) a partir de docs/. No se editan a mano |
 | `local/generar_datos.py` | Genera la base ficticia (demo, SQL y CSV). No edites a mano sus salidas: cambia el generador y vuelve a correrlo |
 | `docs/index.html`, `docs/panel.html`, `docs/base.css`, `docs/config.js` | Páginas ya en v5.5 (participante y panel) |
 | `docs/demo/demo-api.js` | **Referencia ejecutable del contrato v5.5**: si dudas qué debe responder la base, mira la función correspondiente aquí |
-| `tester/tester.py` | Tester (163 pruebas en v5.1; los sprints agregan bloques) |
+| `tester/tester.py` | Tester (355 pruebas en local desde el Sprint 4; los sprints agregan bloques) |
 | `local/` | PostgreSQL local que imita a Supabase + servidor local |
 | `sprints/PLAN.md` | Tareas y criterios de aceptación de cada sprint |
 | `.claude/skills/` | `ciic-desarrollo` (cómo ejecutar un sprint) y `sql-ciic-inscripciones` (reglas para tocar SQL) |
@@ -29,10 +31,11 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 ## Comandos
 
 ```bash
-# Base local desde cero (PostgreSQL 15+)
+# Base local desde cero (PostgreSQL 15+): esquema, todas las migraciones y la base ficticia (3201 en el padrón, 28 actividades)
 dropdb --if-exists ciic && createdb ciic
-psql -d ciic -v ON_ERROR_STOP=1 -f local/supabase_local.sql -f supabase/01_esquema.sql -f supabase/02_api.sql   # + migraciones 03_… en orden
-psql -d ciic -v ON_ERROR_STOP=1 -f local/datos_prueba.sql                # padrón (3201) y actividades (28) ficticios
+psql -d ciic -q -f local/supabase_local.sql
+python supabase/instalar.py --dsn "dbname=ciic" --datos local/datos_prueba.sql
+# poner al día una base que ya existe (solo lo pendiente): python supabase/instalar.py --dsn "dbname=ciic"
 # opcional, para explorar el panel con datos (el tester NO lo necesita):
 # psql -d ciic -v ON_ERROR_STOP=1 -f local/inscripciones_prueba.sql     # 700 + 20 inscripciones ficticias
 python local/generar_datos.py                                          # regenera todo lo ficticio (esquema v5.5)
@@ -43,6 +46,7 @@ python local/servidor_local.py --dsn "dbname=ciic" --puerto 8787 &
 
 # Tester completo en local
 python tester/tester.py --api http://127.0.0.1:8787 --anon local --key "$CLAVE" --local --dsn "dbname=ciic" --web http://127.0.0.1:8787/ --personas 150 --salida /tmp/r
+#   el bloque W inscribe 1000 personas más (--personas-w 1000 por defecto; --personas-w 0 para una corrida rápida)
 python local/medir_local.py --dsn "dbname=ciic" --api http://127.0.0.1:8787   # si la carga se ve lenta
 
 # Backend de demostración (sin base): prueba rápida en Node
@@ -64,4 +68,4 @@ Dependencias: `pip install requests playwright psycopg2-binary openpyxl && pytho
 - SQL: siempre la skill `sql-ciic-inscripciones` (migraciones numeradas, transacción, sin `DELETE`/`UPDATE` sin `where`, funciones nuevas en `privado` con `revoke`).
 - Nunca datos reales de personas en el repositorio, en commits ni en mensajes.
 - Nunca claves `service_role` o `secret` en archivos. `config.js` solo lleva `API_URL` y `ANON_KEY`.
-- Producción solo la toca el propietario, y fuera del congelamiento (sección 20 de la documentación).
+- Producción: Claude Code la toca solo cuando el propietario lo pide en esa sesión, fuera del congelamiento, y solo con `supabase/instalar.py` (primero `--verificar`), `supabase/restaurar.py` o las sentencias de una línea de la guía. Nunca SQL improvisado, nunca la base ficticia ni la clave del tester allí (documentación §20.2, regla 16; skill `sql-ciic-inscripciones`, regla 14).

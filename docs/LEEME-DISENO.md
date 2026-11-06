@@ -101,6 +101,8 @@ Desde Excel, para el CSV: **Guardar como → CSV UTF-8 (delimitado por comas)**.
 | `sin_conexion` | Ambas | Franja gris y mensaje; nada se envía |
 | `error_servidor` | Ambas | Mensaje genérico y número de incidencia |
 | `panel`, `advertencia`, `requiere_cierre`, `sin_permiso`, `ya_existe`… | Panel | Aviso flotante (`#avisos`) o ventana (`#modal`) |
+| `sin_permiso`, `no_autorizado` al entrar | Panel, inicio de sesión | Mensaje en `#msg-login` (cuenta sin rol, desactivada); siempre en el paso visible [Sprint 4] |
+| `enlace_usado` | Panel, inicio de sesión | Mensaje en `#msg-login` cuando se reabre un enlace de invitación ya usado o vencido [Sprint 4] |
 
 ## 7 · Datos de prueba
 

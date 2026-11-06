@@ -9,6 +9,9 @@ __pycache__/
 !local/padron_importar_ejemplo.csv
 *.dump
 respaldo-*.json
+restaurar*.sql
+srv.log
+*.log
 supabase/03_datos.sql
 local/datos_excel*.sql
 .env

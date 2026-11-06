@@ -34,7 +34,7 @@ from pathlib import Path
 import psycopg2
 
 RAIZ = Path(__file__).resolve().parent.parent
-POR_VERSION = {'5.1': 2, '5.5-s1': 3, '5.5-s2': 4, '5.5-s3': 5, '5.5-s3.1': 6, '5.5-s3.2': 7}     # versión → hasta qué migración tenía aplicada (bases sin registro)
+POR_VERSION = {'5.1': 2, '5.5-s1': 3, '5.5-s2': 4, '5.5-s3': 5, '5.5-s3.1': 6, '5.5-s3.2': 7, '5.5-s4': 8}     # versión → hasta qué migración tenía aplicada (bases sin registro)
 
 
 def ref_del_dsn(dsn):

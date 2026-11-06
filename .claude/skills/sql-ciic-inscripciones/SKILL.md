@@ -31,6 +31,7 @@ Casi todo lo operativo tiene botón en el panel. Si lo pedido está en esta list
 | Vaciar las inscripciones de prueba antes de abrir | Sistema → Pasar a producción |
 | Roles del equipo | Sistema → Equipo |
 | Copia de seguridad | Sistema → Respaldo |
+| Recuperar filas borradas o pisadas por error | Respaldo del panel + `python supabase/restaurar.py respaldo.json --solo-faltantes` (doc §19.5, paso 3a): inserta solo lo que falta |
 
 ## Congelamiento
 
@@ -51,7 +52,7 @@ Desde 24 horas antes de abrir hasta el fin del congreso no se corre SQL en produ
 11. **Si cambia el contrato** (campos, tipos de respuesta, niveles), avísalo: hay que subir la versión y actualizar la documentación y las páginas.
 12. **Sin datos personales**: no pidas ni pegues datos reales; para ejemplos y pruebas, datos ficticios.
 13. **Dentro de una función, ningún `DELETE` ni `UPDATE` sin `WHERE`**, ni siquiera los masivos a propósito: Supabase carga `safeupdate` en las conexiones de la API y los rechaza con el error 21000. Si de verdad es para todas las filas, escribe `where true` (Sprint 3.2). El tester lo vigila con un escáner (bloque R).
-14. **Producción**: solo con `supabase/instalar.py` (primero `--verificar`, y con `--confirmar <ref>`) o con las sentencias de una línea que documenta la guía (`ip_cabecera`, `asignar_propietario`), solo cuando el propietario lo pide en esa sesión y fuera del congelamiento. Nunca SQL improvisado en producción.
+14. **Producción**: solo con `supabase/instalar.py` (primero `--verificar`, y con `--confirmar <ref>`), con `supabase/restaurar.py` (restaurar un respaldo, §19.5, primero `--verificar`) o con las sentencias de una línea que documenta la guía (`ip_cabecera`, `asignar_propietario`), solo cuando el propietario lo pide en esa sesión y fuera del congelamiento. Nunca SQL improvisado en producción.
 
 ## Cómo responder a un pedido de SQL
 

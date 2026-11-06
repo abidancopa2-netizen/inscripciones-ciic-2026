@@ -122,6 +122,7 @@ update public.config set ip_cabecera = '<valor>' where id = 1;     -- en los dos
 
 1. 👤 En el proyecto de PRUEBA: Authentication → Users → **Invite user** → tu correo.
 2. 👤 Abre el correo: te lleva al panel publicado. Crea tu contraseña (12 caracteres o más) y registra el código QR en Google Authenticator o Microsoft Authenticator. Verás "Tu cuenta aún no tiene rol": es lo esperado.
+   **El enlace del correo sirve una sola vez.** Después se entra siempre por `https://<usuario>.github.io/<repo>/panel.html`, con correo, contraseña y código; no vuelvas a abrir el correo de invitación. Si lo reabres, el panel ahora te lo explica ("El enlace del correo ya se usó o venció…") en vez de quedarse en silencio (corregido en el Sprint 4).
 3. 🤖 Pídele: **"Asígname como propietario en PRUEBA con mi correo <tu@correo>."** Correrá `select privado.asignar_propietario('<tu@correo>');`.
 4. 👤 Recarga el panel: entras como propietario. Sistema → Equipo te muestra a ti.
 
@@ -133,13 +134,13 @@ El correo de Supabase gratuito envía pocos mensajes por hora: invita solo tu cu
 
 | Comprobación | Esperado |
 |---|---|
-| Tester local (Fase A) | 302 de 302 |
+| Tester local (Fase A) | Todo en verde (303 de 303 con el 3.2; 355 desde el Sprint 4) |
 | Tester contra PRUEBA desde tu equipo, con `--dsn` y `--web` (página publicada) | Todo en verde, incluidas las 3 pruebas de IP |
 | Tester en GitHub Actions | Verde |
 | Mantener Supabase activo | Verde, con los dos proyectos activos |
 | Panel publicado | Entras con contraseña y código; ves el panel como propietario |
-| PRODUCCIÓN | Versión 5.5-s3, vacía, con `ip_cabecera` fijado y sin clave del tester |
-| Secretos | Ninguno en el repositorio (`git log -p` no contiene `postgresql://` ni la clave del tester) |
+| PRODUCCIÓN | La misma versión que PRUEBA (5.5-s3.2 al cerrar el Sprint 3), vacía, con `ip_cabecera` fijado y sin clave del tester |
+| Secretos | Ninguno en el repositorio: `git log -p` no contiene ninguna cadena de conexión **con contraseña** (`postgresql://postgres.<ref>:<contraseña>@…`; las plantillas de la guía y de la documentación no cuentan) ni la clave del tester |
 
 El reporte usa el formato de la skill `ciic-desarrollo` y suma: las cabeceras vistas y el `ip_cabecera` elegido, y las mediciones de C7.
 
