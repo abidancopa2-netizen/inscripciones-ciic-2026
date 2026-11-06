@@ -1,0 +1,50 @@
+{
+ "sprint": "sprint-3",
+ "siguiente": "Fase A: instala la base local desde cero (incluye 05), reinicia el servidor y corre el tester con --web. Después, sprints/sprint-3/GUIA.md.",
+ "archivos": {
+  "supabase/05_sprint3_supabase.sql": {
+   "base": null,
+   "nuevo": "654575f5d8d9"
+  },
+  "supabase/instalar.py": {
+   "base": null,
+   "nuevo": "4085b42f46bb"
+  },
+  "tester/tester.py": {
+   "base": "449ee00b9f3f",
+   "nuevo": "496e26b5c201"
+  },
+  "docs/panel.html": {
+   "base": "1b352ff32b5e",
+   "nuevo": "c112167e156a"
+  },
+  ".github/workflows/tester.yml": {
+   "base": "2af92b56bb21",
+   "nuevo": "49eef8594d84"
+  },
+  ".github/workflows/mantener-activo.yml": {
+   "base": "b0b53de30ccf",
+   "nuevo": "8b0236d5de32"
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "2cb3a5307cba",
+   "nuevo": "6f8bfac03372"
+  },
+  ".claude/settings.json": {
+   "base": "a22c1697a187",
+   "nuevo": "39ad45105f43"
+  },
+  "CLAUDE.md": {
+   "base": "d8cedf27c2dc",
+   "nuevo": "f8ef91e89ade"
+  },
+  "sprints/PLAN.md": {
+   "base": "c28ba579c34f",
+   "nuevo": "20abd36c3c47"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "db62e3d4e581",
+   "nuevo": "3732107a4f3a"
+  }
+ }
+}

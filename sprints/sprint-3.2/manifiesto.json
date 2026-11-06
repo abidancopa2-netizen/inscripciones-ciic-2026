@@ -1,0 +1,46 @@
+{
+ "sprint": "sprint-3.2",
+ "siguiente": "en local: instalar.py aplica solo la 07; reinicia el servidor y corre el tester con --web. Luego repite C2 (solo la 07), C4 y C5 contra PRUEBA, y sigue con C6.",
+ "archivos": {
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "d589e574238a",
+   "nuevo": "b25cfc3bbd66",
+   "incorpora": "incorpora tu arreglo de psql -d al inicio y la comprobación de valor no vacío, y alinea la regla de producción con la guía",
+   "locales": [
+    "a1db42586b2e"
+   ]
+  },
+  "supabase/07_sprint3_safeupdate.sql": {
+   "base": null,
+   "nuevo": "ab1ef5a6ec64"
+  },
+  "supabase/instalar.py": {
+   "base": "cf2f7ff5ae91",
+   "nuevo": "42dcd02ed188"
+  },
+  "tester/tester.py": {
+   "base": "496e26b5c201",
+   "nuevo": "c9ca307c89f8"
+  },
+  "local/servidor_local.py": {
+   "base": "065333eb9c2e",
+   "nuevo": "f9eae6e35d63"
+  },
+  ".claude/skills/sql-ciic-inscripciones/SKILL.md": {
+   "base": "db7c8659060c",
+   "nuevo": "9afbf230f363"
+  },
+  "sprints/sprint-3/GUIA.md": {
+   "base": "08f4b8f1c5a3",
+   "nuevo": "a5b06b59b51e"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "3b295b9437c3",
+   "nuevo": "a69c197906e9"
+  },
+  "sprints/PLAN.md": {
+   "base": "541bea9da5ea",
+   "nuevo": "0dda64eb0c84"
+  }
+ }
+}

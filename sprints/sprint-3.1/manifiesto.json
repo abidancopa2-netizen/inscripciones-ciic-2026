@@ -1,0 +1,58 @@
+{
+ "sprint": "sprint-3.1",
+ "siguiente": "en tu base local: python supabase/instalar.py --dsn \"dbname=ciic\" (aplica solo la 06), reinicia el servidor y corre el tester con --web. Después, GUIA.md desde la Fase B.",
+ "archivos": {
+  "supabase/instalar.py": {
+   "base": "4085b42f46bb",
+   "nuevo": "cf2f7ff5ae91",
+   "incorpora": "incorpora tus 3 arreglos (PRODUCCION abierta, --datos con padrón, archivos de datos sueltos) y resuelve la raíz: registro de migraciones, solo lo pendiente, en una transacción",
+   "locales": [
+    "ad5f5a731f65"
+   ]
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "6f8bfac03372",
+   "nuevo": "d589e574238a",
+   "incorpora": "incorpora tu arreglo del salto antes de ADMIN_KEY (y pasa .env.local a comillas simples)",
+   "locales": [
+    "1b27d5fe5382"
+   ]
+  },
+  "supabase/06_sprint3_participantes.sql": {
+   "base": null,
+   "nuevo": "4da6b7967cde"
+  },
+  "supabase/excel_a_sql.py": {
+   "base": "3ab4fd198762",
+   "nuevo": "25d40a21c960"
+  },
+  "tester/requirements.txt": {
+   "base": "90f36a8ff3a7",
+   "nuevo": "c5d1cee1a30b"
+  },
+  ".github/workflows/tester.yml": {
+   "base": "49eef8594d84",
+   "nuevo": "a34d51606a7f"
+  },
+  ".github/workflows/mantener-activo.yml": {
+   "base": "8b0236d5de32",
+   "nuevo": "1ed37c00c321"
+  },
+  "sprints/sprint-3/GUIA.md": {
+   "base": "b7f6f59a35cc",
+   "nuevo": "08f4b8f1c5a3"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "3732107a4f3a",
+   "nuevo": "3b295b9437c3"
+  },
+  ".gitignore": {
+   "base": "adf56c1523f9",
+   "nuevo": "aeff03959358"
+  },
+  "sprints/PLAN.md": {
+   "base": "20abd36c3c47",
+   "nuevo": "541bea9da5ea"
+  }
+ }
+}

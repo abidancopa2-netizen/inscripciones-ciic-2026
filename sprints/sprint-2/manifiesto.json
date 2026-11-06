@@ -1,0 +1,54 @@
+{
+ "sprint": "sprint-2",
+ "siguiente": "instala la base desde cero (incluye supabase/04_*.sql y los datos v5.5), reinicia el servidor local y corre el tester CON --web.",
+ "archivos": {
+  "supabase/04_sprint2_datos.sql": {
+   "base": null,
+   "nuevo": "b5647912a022"
+  },
+  "supabase/excel_a_sql.py": {
+   "base": "88bbe8684da7",
+   "nuevo": "3ab4fd198762"
+  },
+  "local/generar_datos.py": {
+   "base": "6b732bf34463",
+   "nuevo": "868eafed45cb"
+  },
+  "local/datos_prueba.sql": {
+   "base": "ad584e36a9f2",
+   "nuevo": "e227a4ebb7dd"
+  },
+  "local/inscripciones_prueba.sql": {
+   "base": "f09f6bed2c17",
+   "nuevo": "65e9e7806209"
+  },
+  "local/servidor_local.py": {
+   "base": "c281fb2fbe2d",
+   "nuevo": "065333eb9c2e"
+  },
+  "local/medir_local.py": {
+   "base": "1d23a2ca0a80",
+   "nuevo": "66b7dc309d44"
+  },
+  "tester/tester.py": {
+   "base": "edbca4547920",
+   "nuevo": "8501da2f15fe"
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "12f1fd3b4210",
+   "nuevo": "2cb3a5307cba"
+  },
+  "CLAUDE.md": {
+   "base": "5904041f18e2",
+   "nuevo": "d8cedf27c2dc"
+  },
+  "sprints/PLAN.md": {
+   "base": "8346a7056f9a",
+   "nuevo": "e6a6d149f9cd"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "5f2f1c65e5c2",
+   "nuevo": "af247771a440"
+  }
+ }
+}

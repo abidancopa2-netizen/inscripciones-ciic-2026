@@ -1,0 +1,29 @@
+id;tipo;nombre;lugar;fecha;inicio;fin;cupo;descripcion;entrega;enlace;visible
+VIS01;VISITA;Planta de tratamiento de agua potable La Atarjea;El Agustino, Lima;12/11/2026;08:00;12:00;25;Punto de encuentro: puerta principal del congreso, 30 minutos antes. Casco y chaleco obligatorios.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS01xdmt9tx69d7h7ww;SI
+VIS02;VISITA;Obra vial: intercambio Av. Periférica;San Juan de Lurigancho, Lima;12/11/2026;08:30;12:30;20;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS02xuq4vu5233s33vr;SI
+VIS03;VISITA;Presa de derivación Huachipa;Lurigancho-Chosica, Lima;12/11/2026;07:30;13:00;15;Llevar DNI físico: la presa exige registro en la entrada.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS03xhawcdk5dra57ys;SI
+VIS04;VISITA;Metro de Lima · túnel de la Línea 2;Ate, Lima;12/11/2026;09:00;12:00;30;Calzado de seguridad obligatorio.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS04xymgpjn8n4p2txc;SI
+VIS05;VISITA;Puente vehicular Villa El Salvador;Villa El Salvador, Lima;12/11/2026;14:00;17:00;20;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS05x2mcuukkre7xzzv;SI
+VIS06;VISITA;Planta de prefabricados de concreto;Lurín, Lima;12/11/2026;08:00;12:00;20;Salida en bus a las 07:15 desde la puerta principal.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS06xka6znnrqcp7vus;SI
+VIS07;VISITA;Edificio corporativo con aisladores sísmicos;San Isidro, Lima;12/11/2026;09:30;12:00;25;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS07x6dqt436w7sp8tj;SI
+TAL01;TALLER;Modelado BIM para obras viales;Auditorio A;12/11/2026;15:00;18:00;150;Trae laptop con el software indicado en el grupo de WhatsApp.;ENLACE;https://chat.whatsapp.com/PRUEBATAL01x6qv8stt4avh3e5;SI
+TAL02;TALLER;Diseño de mezclas de concreto de alta resistencia;Laboratorio 1;12/11/2026;15:00;18:00;120;;ENLACE;https://chat.whatsapp.com/PRUEBATAL02xb9zt7ydzwqses7;SI
+TAL03;TALLER;Geotecnia aplicada a cimentaciones profundas;Auditorio B;12/11/2026;15:00;18:00;140;;ENLACE;https://chat.whatsapp.com/PRUEBATAL03xh67dxzrysz89uj;SI
+TAL04;TALLER;Topografía y fotogrametría con drones;Aula 204;12/11/2026;15:00;18:00;110;;ENLACE;https://chat.whatsapp.com/PRUEBATAL04xupyku4xtzs47pq;SI
+TAL05;TALLER;Gestión de riesgos de desastres en obras;Auditorio C;12/11/2026;15:00;18:00;130;;ENLACE;https://chat.whatsapp.com/PRUEBATAL05xgk5jabex7w9r4t;SI
+TAL06;TALLER;Programación de obras con Primavera P6;Laboratorio de cómputo 2;12/11/2026;15:30;18:30;120;Trae laptop con Primavera P6 instalado (versión de prueba).;ENLACE;https://chat.whatsapp.com/PRUEBATAL06x8sn8gjzsrt35s4;SI
+VIS13;VISITA;Viaducto Costa Verde (en preparación);Magdalena del Mar, Lima;12/11/2026;08:00;11:00;15;;ENLACE;;NO
+VIS08;VISITA;Central hidroeléctrica Callahuanca;Huarochirí, Lima;13/11/2026;07:00;14:00;15;Salida en bus a las 06:30. Retorno aproximado a las 16:00.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS08xquy8b5kmr84drz;SI
+VIS09;VISITA;Proyecto de saneamiento integral;Carabayllo, Lima;13/11/2026;09:00;12:00;25;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS09xz49tjr89f9q52s;SI
+VIS10;VISITA;Laboratorio de suelos e hidráulica;Rímac, Lima;13/11/2026;10:00;13:00;20;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS10x9cxj7sndg26qer;SI
+VIS11;VISITA;Planta de asfalto industrial;Lurín, Lima;13/11/2026;08:30;12:00;20;;MANUAL;;SI
+VIS12;VISITA;Torre Bicentenario · edificio inteligente;San Isidro, Lima;13/11/2026;08:00;11:30;20;;ENLACE;https://chat.whatsapp.com/PRUEBAVIS12x8acarvu85cw4gh;SI
+VIS14;VISITA;Nuevo Puerto del Callao · muelle de contenedores;Callao;13/11/2026;08:00;12:30;30;Llevar DNI físico y chaleco reflectivo.;ENLACE;https://chat.whatsapp.com/PRUEBAVIS14xdwb3u9jy3xneam;SI
+VIS15;VISITA;Hospital de alta complejidad en construcción;Ate, Lima;13/11/2026;09:00;12:00;20;;MANUAL;;SI
+TAL07;TALLER;Gestión de proyectos con Last Planner;Auditorio A;13/11/2026;15:00;18:00;150;;ENLACE;https://chat.whatsapp.com/PRUEBATAL07xyvv3896sz29euh;SI
+TAL08;TALLER;Análisis sísmico de edificaciones con ETABS;Laboratorio de cómputo 1;13/11/2026;15:00;18:00;120;Trae laptop con ETABS instalado (versión educativa).;ENLACE;https://chat.whatsapp.com/PRUEBATAL08xsve9w7ztkcqyf8;SI
+TAL09;TALLER;Hidráulica de canales con HEC-RAS;Aula 301;13/11/2026;15:00;18:00;130;;ENLACE;https://chat.whatsapp.com/PRUEBATAL09xe448vktqp4et4g;SI
+TAL10;TALLER;Pavimentos: diseño y mantenimiento;Auditorio B;13/11/2026;15:00;18:00;140;;ENLACE;;SI
+TAL11;TALLER;Estructuras de acero y conexiones;Aula 204;13/11/2026;15:00;18:00;110;;ENLACE;https://chat.whatsapp.com/PRUEBATAL11xpa9dp7cb5nxn83;SI
+TAL12;TALLER;Norma E.030 y diseño sismorresistente;Auditorio C;13/11/2026;15:00;18:00;120;;ENLACE;https://chat.whatsapp.com/PRUEBATAL12x9aatsmykrm8ds9;SI
+VIS16;VISITA;Túnel Trasandino (por confirmar);Matucana, Lima;13/11/2026;07:00;15:00;15;;ENLACE;;NO

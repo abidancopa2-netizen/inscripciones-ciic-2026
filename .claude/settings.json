@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./demo/*.html)",
+      "Read(./docs/demo/datos-demo.js)",
+      "Read(./local/inscripciones_prueba.sql)",
+      "Read(./local/datos_prueba.sql)",
+      "Read(./local/padron_prueba.csv)",
+      "Read(./documentacion/lamina-INS-07-contrato-v5.3.html)",
+      "Read(./.env)",
+      "Read(./**/*.dump)",
+      "Read(./**/respaldo-*.json)",
+      "Read(./.env.local)",
+      "Read(./.env.*)"
+    ]
+  }
+}

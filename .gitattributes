@@ -1,0 +1,6 @@
+# Finales de línea LF en todo el proyecto, también al descargar en Windows: así las huellas de aplicar.py no cambian.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.zip binary

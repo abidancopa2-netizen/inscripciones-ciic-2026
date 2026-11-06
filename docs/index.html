@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inscripción · visitas técnicas y talleres</title>
+<link rel="stylesheet" href="base.css">
+<script src="config.js"></script>
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PÁGINA DEL PARTICIPANTE · contrato v5.5 (documentación, sección 13)
+     Para tu diseño: cambia base.css, los textos visibles y el orden visual.
+     CONSERVA: ids, atributos data-*, los tres <section data-pantalla> y el
+     bloque <script>. La lista completa está en LEEME-DISENO.md.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="banner" id="banner" role="status" hidden></div>
+<div class="demo-cinta" id="demo-cinta" data-demo hidden></div>
+
+<header class="cabecera">
+  <div class="contenido">
+    <h1 id="evento">Congreso</h1>
+    <p>Inscripción a visitas técnicas y talleres</p>
+  </div>
+</header>
+
+<main class="contenido">
+  <!-- Pantalla 1 · documento -->
+  <section class="tarjeta" data-pantalla="1" aria-labelledby="t1">
+    <div class="paso">Paso 1 de 3</div>
+    <h2 id="t1">Escribe tu documento</h2>
+    <form id="form-doc" novalidate>
+      <label for="doc">DNI, carnet de extranjería o pasaporte</label>
+      <input id="doc" name="doc" autocomplete="off" maxlength="20" placeholder="Ej.: 45678912" required>
+      <button class="boton ancho-total" id="btn-verificar" type="submit">Verificar</button>
+    </form>
+    <div id="msg-1" aria-live="polite"></div>
+  </section>
+
+  <!-- Pantalla 2 · elección y datos -->
+  <section class="tarjeta" data-pantalla="2" aria-labelledby="t2" hidden>
+    <div class="paso">Paso 2 de 3</div>
+    <h2 id="t2">Elige tus actividades</h2>
+    <div id="msg-verif" aria-live="polite"></div>
+    <div id="dias"></div>
+    <form id="form-datos" novalidate>
+      <h3 class="dia">Tus datos</h3>
+      <div class="dos-col">
+        <div><label for="nombres">Nombres</label><input id="nombres" autocomplete="given-name" maxlength="60" required></div>
+        <div><label for="apellidos">Apellidos</label><input id="apellidos" autocomplete="family-name" maxlength="60" required></div>
+      </div>
+      <label for="correo">Correo institucional</label>
+      <input id="correo" type="email" autocomplete="email" maxlength="100" placeholder="nombre.apellido@universidad.edu.pe" required>
+      <label for="celular">Celular con WhatsApp</label>
+      <div class="fila">
+        <select id="pais" aria-label="Código de país">
+          <option value="PE">🇵🇪 +51</option><option value="CL">🇨🇱 +56</option><option value="CO">🇨🇴 +57</option>
+          <option value="EC">🇪🇨 +593</option><option value="BO">🇧🇴 +591</option><option value="AR">🇦🇷 +54</option>
+          <option value="MX">🇲🇽 +52</option><option value="BR">🇧🇷 +55</option><option value="VE">🇻🇪 +58</option>
+          <option value="PY">🇵🇾 +595</option><option value="UY">🇺🇾 +598</option><option value="ES">🇪🇸 +34</option><option value="US">🇺🇸 +1</option>
+        </select>
+        <input id="celular" inputmode="tel" autocomplete="tel-national" maxlength="20" placeholder="987654321" required>
+      </div>
+      <label class="casilla"><input type="checkbox" id="acepta"> <span>Leí el <button type="button" class="enlace" id="btn-aviso">aviso de privacidad</button> y acepto que la organización use mis datos para esta inscripción y me contacte por WhatsApp para coordinar mis actividades.</span></label>
+      <div id="msg-2" aria-live="polite"></div>
+      <button class="boton ancho-total" id="btn-confirmar" type="submit">Confirmar inscripción</button>
+      <button class="boton secundario ancho-total" id="btn-volver" type="button">Cambiar documento</button>
+    </form>
+  </section>
+
+  <!-- Pantalla 3 · confirmación (se muestra una sola vez; sin código) -->
+  <section class="tarjeta" data-pantalla="3" aria-labelledby="titulo-3" hidden>
+    <div class="paso">Paso 3 de 3</div>
+    <h2 id="titulo-3">¡Inscripción confirmada!</h2>
+    <div class="mensaje" data-estilo="aviso" id="aviso-unica">Esta confirmación se muestra una sola vez: entra ahora a tus grupos o toma una captura de pantalla.</div>
+    <dl class="comprobante" id="comprobante"></dl>
+    <button class="boton secundario ancho-total" id="btn-imprimir" type="button">Guardar como PDF</button>
+    <button class="boton secundario ancho-total" id="btn-inicio" type="button">Volver al inicio</button>
+  </section>
+</main>
+<footer class="pie" id="pie"></footer>
+
+<dialog id="dlg-aviso" aria-labelledby="dlg-aviso-t">
+  <h3 id="dlg-aviso-t">Aviso de privacidad</h3>
+  <div id="dlg-aviso-texto" class="aviso-texto"></div>
+  <div class="botones" style="margin-top:12px"><button class="boton" id="dlg-aviso-ok" type="button">Entendido</button></div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+  const CFG = window.CIIC_CONFIG || {};
+  const DEMO = String(CFG.MODO || '').toLowerCase() === 'demo';
+  const API = String(CFG.API_URL || '').trim().replace(/\/+$/, '');
+  const ANON = String(CFG.ANON_KEY || '').trim();
+  const CABECERAS = Object.assign({ 'Content-Type': 'application/json', apikey: ANON }, /^eyJ/.test(ANON) ? { Authorization: 'Bearer ' + ANON } : {});
+  const ESTILO = { ok: 'exito', registrado: 'exito', duplicado: 'aviso', cerrado: 'aviso', recargar: 'aviso', lleno: 'aviso', no_disponible: 'aviso', ocupado: 'aviso',
+                   espera: 'aviso', sin_conexion: 'aviso', etapa_no_habilitada: 'info', visita_no_habilitada: 'info', info: 'info' };
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs, texto) => {      // todo con textContent: nunca innerHTML con datos de personas
+    const e = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? '' : v); });
+    if (texto != null) e.textContent = texto;
+    return e;
+  };
+  const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+
+  // Identificador del dispositivo (límite de intentos, R-25)
+  const DISPOSITIVO = (() => {
+    try { let d = localStorage.getItem('ciic_dispositivo'); if (!d) { d = uuid(); localStorage.setItem('ciic_dispositivo', d); } return d; } catch (e) { return uuid(); }
+  })();
+
+  // ── Llamada a la API · R-28 y retroceso: "ocupado" se reintenta rápido; sin red, espera creciente con azar ──
+  async function api(datos, paciente, alEsperar) {
+    const inicio = Date.now();
+    for (let i = 1; ; i++) {
+      if (!navigator.onLine) return { ok: false, tipo: 'sin_conexion', mensaje: 'Sin conexión: no se ha enviado nada. Revisa tu internet; la página se actualiza sola al volver.' };
+      let r = null, red = false;
+      try {
+        if (DEMO) r = await window.CIIC_DEMO.api(datos, { dispositivo: DISPOSITIVO, red: 'demo' });
+        else {
+          const h = await fetch(API + '/rest/v1/rpc/api', { method: 'POST', headers: CABECERAS, body: JSON.stringify({ p: datos }) });
+          const j = await h.json().catch(() => null);
+          if (j && typeof j === 'object' && ('tipo' in j || 'ok' in j)) r = j; else red = true;
+        }
+      } catch (e) { red = true; }
+      if (r && r.tipo !== 'ocupado') return r;
+      if (!paciente && i >= 4) break;
+      if (Date.now() - inicio > 180000) break;
+      if (i >= 2 && alEsperar) alEsperar();
+      const espera = red ? Math.min(8000, 500 * 2 ** (i - 1)) : 500 + Math.random() * 1500;
+      await esperar(espera * (0.75 + Math.random() * 0.5));
+    }
+    return { ok: false, tipo: 'sin_conexion', mensaje: 'No pudimos conectarnos con el sistema. Revisa tu internet e inténtalo otra vez.' };
+  }
+
+  // ── Estado de la página ──
+  let estado = null, verif = null, actividades = [], sel = [], cuenta = null, finCuenta = 0, tRefresco = null, simOffline = false;
+  function pantalla(n) { document.querySelectorAll('[data-pantalla]').forEach((s) => { s.hidden = s.dataset.pantalla !== String(n); }); window.scrollTo({ top: 0 }); }
+  const pantallaActual = () => +document.querySelector('[data-pantalla]:not([hidden])').dataset.pantalla;
+  function mensaje(caja, r) {
+    caja.textContent = '';
+    if (!r) return;
+    const texto = (r.mensaje || '') + (r.incidencia ? ' (Incidencia ' + r.incidencia + ')' : '');
+    caja.appendChild(el('div', { class: 'mensaje', 'data-tipo': r.tipo, 'data-estilo': ESTILO[r.tipo] || 'error', role: ESTILO[r.tipo] === 'exito' ? 'status' : 'alert' }, texto));
+  }
+  const ocupado = (b, si, t) => { b.disabled = si; if (t) b.textContent = t; };
+
+  // ── Franja: cuenta regresiva (R-27) o sin conexión ──
+  function pintarBanner() {
+    const b = $('banner');
+    if (!navigator.onLine || simOffline) { b.hidden = false; b.dataset.tipo = 'sin_conexion'; b.textContent = 'Sin conexión · la página se actualizará cuando vuelva internet'; return; }
+    if (estado && estado.abierto && cuenta != null) {
+      const s = Math.max(0, Math.ceil((finCuenta - Date.now()) / 1000));
+      b.hidden = false; b.dataset.tipo = 'aviso';
+      b.textContent = 'Las inscripciones se cierran en ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '. Confirma tu elección antes.';
+      if (s === 0) { cuenta = null; refrescar(); }
+      return;
+    }
+    b.hidden = true;
+  }
+  setInterval(pintarBanner, 1000);
+
+  // ── Refresco (R-28): cada "refresco" s, al volver la conexión y al volver a la pestaña; una sola llamada (D3) ──
+  async function refrescar() {
+    clearTimeout(tRefresco);
+    if (navigator.onLine) {
+      const p = pantallaActual();
+      const e = await api({ action: 'estado', conActividades: p === 2 });
+      if (e.tipo === 'estado') {
+        estado = e; cuenta = e.cierraEn; finCuenta = Date.now() + (e.cierraEn || 0) * 1000;
+        if (p === 2 && verif) {
+          if (!e.abierto) volverAlInicio({ tipo: 'cerrado', mensaje: 'Las inscripciones se cerraron antes de que confirmaras. Tu elección no se guardó. Esta página se actualiza sola cuando vuelvan a abrir.' });
+          else if (e.ronda !== verif.ronda) volverAlInicio({ tipo: 'recargar', mensaje: 'El sistema se actualizó mientras elegías. Vuelve a verificar tu documento.' }, verif.doc);
+          else {
+            const puede = e.etapasVisita.includes(verif.etapa);
+            if (puede !== verif.puedeVisita) { verif.puedeVisita = puede; mensaje($('msg-verif'), { tipo: 'info', mensaje: puede ? 'Ahora tu etapa también puede elegir visitas técnicas.' : 'Tu etapa se inscribe en 2 talleres.' }); }
+            if (e.actividades) { actividades = e.actividades; limpiarSeleccion(); pintarActividades(); }
+          }
+        } else if (p === 1) {
+          const m = $('msg-1').firstChild;
+          if (!e.abierto && (!m || m.dataset.tipo !== 'cerrado')) mensaje($('msg-1'), { tipo: 'cerrado', mensaje: 'Las inscripciones están cerradas en este momento. Esta página se actualiza sola cuando abran.' });
+          if (e.abierto && m && m.dataset.tipo === 'cerrado') mensaje($('msg-1'), null);
+        }
+      }
+    }
+    pintarBanner();
+    if (!document.hidden) tRefresco = setTimeout(refrescar, ((estado && estado.refresco) || 20) * 1000 * (0.75 + Math.random() * 0.5));
+  }
+  window.addEventListener('online', refrescar);
+  window.addEventListener('offline', pintarBanner);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescar(); });
+
+  function volverAlInicio(r, doc) { verif = null; sel = []; actividades = []; pantalla(1); $('doc').value = doc || ''; mensaje($('msg-1'), r); }
+
+  // ── Pantalla 1 ──
+  const limpiarDoc = (v) => String(v || '').toUpperCase().replace(/[\s.\-]/g, '');
+  $('form-doc').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const doc = $('doc').value;
+    if (!/^[A-Z0-9]{6,12}$/.test(limpiarDoc(doc)) || !/\d/.test(doc)) {      // se valida aquí para no gastar intentos
+      return mensaje($('msg-1'), { tipo: 'formato', mensaje: 'Revisa el número: escribe tu DNI de 8 dígitos, o tu carnet de extranjería o pasaporte, sin espacios.' });
+    }
+    ocupado($('btn-verificar'), true, 'Verificando…');
+    const r = await api({ action: 'verificar', dni: doc, dispositivo: DISPOSITIVO }, true,
+      () => mensaje($('msg-1'), { tipo: 'espera', mensaje: 'Estás en la fila: hay mucha demanda. Seguimos intentando; no recargues la página.' }));
+    ocupado($('btn-verificar'), false, 'Verificar');
+    if (r.tipo === 'ok') {
+      verif = r; actividades = r.actividades || []; sel = [];
+      mensaje($('msg-1'), null); mensaje($('msg-verif'), r); mensaje($('msg-2'), null);
+      pintarActividades(); pantalla(2);
+    } else {
+      mensaje($('msg-1'), r);      // incluye "duplicado": solo el aviso, sin datos (R-31)
+      if (r.tipo === 'demasiados_intentos') { $('btn-verificar').disabled = true; setTimeout(() => { $('btn-verificar').disabled = false; }, (r.esperaMinutos || 10) * 60000); }
+    }
+  });
+
+  // ── Pantalla 2 ──
+  const dia = (f) => { const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(f); return m ? new Date(+m[3], +m[2] - 1, +m[1]).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long' }) : f; };
+  const clave = (f) => f.slice(6) + f.slice(3, 5) + f.slice(0, 2);
+  const act = (id) => actividades.find((a) => a.id === id);
+  function motivoBloqueo(a) {      // la página anticipa; la base vuelve a revisar al confirmar
+    if (sel.includes(a.id)) return '';
+    if (a.lleno) return 'Llena';
+    if (a.tipo === 'VISITA' && !verif.puedeVisita) return 'Solo ' + ((estado && estado.etapasVisita) || [1]).map((e) => 'Etapa ' + e).join(' y ');
+    const otra = sel.map(act).find(Boolean);
+    if (otra && (a.cruzaCon || []).includes(otra.id)) return 'Se cruza con ' + otra.id;
+    return '';
+  }
+  const limpiarSeleccion = () => { sel = sel.filter((id) => { const a = act(id); return a && !a.lleno; }); };
+  function pintarActividades() {
+    const cont = $('dias'); cont.textContent = '';
+    const mismoDia = estado && estado.mismoDia;
+    $('t2').textContent = mismoDia ? 'Elige 2 actividades' : 'Elige una actividad por día';
+    if (mismoDia) cont.appendChild(el('div', { class: 'mensaje', 'data-estilo': 'info' }, 'Puedes elegir las dos el mismo día si sus horarios no se cruzan.'));
+    [...new Set(actividades.map((a) => a.fecha))].sort((x, y) => clave(x).localeCompare(clave(y))).forEach((f) => {
+      cont.appendChild(el('h3', { class: 'dia' }, dia(f)));
+      actividades.filter((a) => a.fecha === f).forEach((a) => {
+        const bloqueo = motivoBloqueo(a);
+        const b = el('button', { type: 'button', class: 'opcion', 'data-actividad': a.id, 'data-tipo-actividad': a.tipo, 'aria-pressed': String(sel.includes(a.id)), disabled: !!bloqueo });
+        b.appendChild(el('span', { class: 'etiqueta', 'data-tipo': a.tipo }, a.tipo === 'VISITA' ? 'Visita' : 'Taller'));
+        const n = el('span', { class: 'nombre' }, a.nombre);
+        n.appendChild(el('span', { class: 'detalle' }, a.inicio + '–' + a.fin + ' · ' + a.lugar));
+        if (a.descripcion) n.appendChild(el('span', { class: 'detalle' }, a.descripcion));
+        b.appendChild(n);
+        b.appendChild(el('span', { class: 'quedan' }, bloqueo || 'quedan ' + a.disponibles));
+        b.addEventListener('click', () => elegir(a.id));
+        cont.appendChild(b);
+      });
+    });
+  }
+  function elegir(id) {
+    const a = act(id); let aviso = null;
+    if (sel.includes(id)) sel = sel.filter((x) => x !== id);
+    else {
+      if (a.tipo === 'VISITA') { const v = sel.find((x) => act(x) && act(x).tipo === 'VISITA'); if (v) { sel = sel.filter((x) => x !== v); aviso = 'Solo una visita técnica: quitamos ' + act(v).nombre + '.'; } }
+      if (!(estado && estado.mismoDia)) sel = sel.filter((x) => act(x) && act(x).fecha !== a.fecha);
+      if (sel.length >= 2) aviso = 'Ya elegiste 2: quita una para cambiarla.'; else sel.push(id);
+    }
+    pintarActividades();
+    mensaje($('msg-2'), aviso ? { tipo: 'info', mensaje: aviso } : null);
+  }
+  $('btn-volver').addEventListener('click', () => volverAlInicio(null));
+  $('btn-aviso').addEventListener('click', () => { $('dlg-aviso').showModal(); });
+  $('dlg-aviso-ok').addEventListener('click', () => $('dlg-aviso').close());
+
+  let solicitud = null, firma = '';      // R-32: una solicitud por intento; se reusa al reintentar lo mismo
+  $('form-datos').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const datos = { nombres: $('nombres').value.trim(), apellidos: $('apellidos').value.trim(), correo: $('correo').value.trim(), pais: $('pais').value, celular: $('celular').value };
+    const cel = datos.celular.replace(/\D/g, '');
+    if (sel.length !== 2) return mensaje($('msg-2'), { tipo: 'combinacion_invalida', mensaje: 'Elige 2 actividades.' });
+    if (datos.nombres.length < 2) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tus nombres.' });
+    if (datos.apellidos.length < 2) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tus apellidos.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.correo)) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tu correo institucional.' });
+    if (datos.pais === 'PE' ? !/^9\d{8}$/.test(cel.replace(/^51(?=9\d{8}$)/, '')) : !/^\d{6,14}$/.test(cel))
+      return mensaje($('msg-2'), { tipo: 'celular_invalido', mensaje: datos.pais === 'PE' ? 'Revisa tu celular: en Perú son 9 dígitos y empiezan con 9.' : 'Revisa tu celular: entre 6 y 14 dígitos, sin el código de país.' });
+    if (!$('acepta').checked) return mensaje($('msg-2'), { tipo: 'sin_consentimiento', mensaje: 'Para inscribirte necesitamos que aceptes el aviso de privacidad y el contacto por WhatsApp.' });
+    const p = Object.assign({ action: 'registrar', dni: verif.doc, aceptaPrivacidad: true, aceptaWhatsapp: true, actividades: sel.slice(), ronda: verif.ronda, dispositivo: DISPOSITIVO }, datos);
+    const f = JSON.stringify(p);
+    if (f !== firma) { firma = f; solicitud = uuid(); }
+    p.solicitud = solicitud;
+    ocupado($('btn-confirmar'), true, 'Confirmando…');
+    const r = await api(p, true, () => mensaje($('msg-2'), { tipo: 'espera', mensaje: 'Estás en la fila: hay mucha demanda. Seguimos intentando; no recargues ni cierres la página.' }));
+    ocupado($('btn-confirmar'), false, 'Confirmar inscripción');
+    if (r.tipo === 'registrado') { firma = ''; return confirmacion(r); }
+    if (r.tipo === 'duplicado' || r.tipo === 'cerrado') return volverAlInicio(r);
+    if (r.tipo === 'recargar') return volverAlInicio(r, verif.doc);
+    if (r.tipo === 'solicitud_repetida') firma = '';
+    if (r.actividades) actividades = r.actividades;
+    if (r.tipo === 'lleno' && r.actividadId) sel = sel.filter((x) => x !== r.actividadId);
+    if (r.tipo === 'visita_no_habilitada') sel = sel.filter((x) => act(x) && act(x).tipo !== 'VISITA');
+    limpiarSeleccion(); pintarActividades();
+    mensaje($('msg-2'), r);
+  });
+
+  // ── Pantalla 3 · confirmación única (R-31: sin código) ──
+  function confirmacion(r) {
+    const dl = $('comprobante'); dl.textContent = '';
+    const fila = (t, nodo) => { dl.appendChild(el('dt', {}, t)); dl.appendChild(nodo); };
+    fila('Documento', el('dd', {}, r.doc));
+    fila('Etapa', el('dd', {}, 'Etapa ' + r.etapa));
+    (r.actividades || []).forEach((a) => {
+      const dd = el('dd', { 'data-actividad': a.id }, (a.tipo === 'VISITA' ? 'Visita · ' : 'Taller · ') + a.nombre);
+      dd.appendChild(el('small', {}, a.inicio + '–' + a.fin + ' · ' + a.lugar));
+      if (a.descripcion) dd.appendChild(el('small', {}, a.descripcion));
+      if (a.grupoModo === 'MANUAL') dd.appendChild(el('small', { 'data-grupo': 'manual' }, 'La organización te agregará al grupo de WhatsApp con tu número ' + r.celular + '. Si no es correcto, escríbenos.'));
+      else if (a.grupo) {
+        dd.appendChild(el('a', { class: 'boton whatsapp chico', href: a.grupo, target: '_blank', rel: 'noopener', 'data-grupo': 'enlace' }, 'Unirme al grupo ' + (a.tipo === 'VISITA' ? 'de la visita' : 'del taller')));
+        dd.appendChild(el('small', {}, 'Un administrador aprobará tu ingreso.'));
+      } else dd.appendChild(el('small', { 'data-grupo': 'pendiente' }, 'Aún no hay grupo: te escribiremos por WhatsApp.'));
+      fila(dia(a.fecha), dd);
+    });
+    verif = null; sel = [];
+    pantalla(3);
+  }
+  $('btn-imprimir').addEventListener('click', () => window.print());
+  $('btn-inicio').addEventListener('click', () => volverAlInicio(null));
+
+  // ── Modo demo: cinta con documentos de prueba (data-demo: no es parte del diseño) ──
+  function cintaDemo() {
+    const c = $('demo-cinta'); c.hidden = false;
+    c.appendChild(el('b', {}, 'MODO DEMO · datos de prueba '));
+    window.CIIC_DEMO.documentosDePrueba.forEach((d) => {
+      const b = el('button', { type: 'button', title: d.caso }, d.doc);
+      b.addEventListener('click', () => { if (pantallaActual() !== 1) volverAlInicio(null); $('doc').value = d.doc; $('doc').focus(); mensaje($('msg-1'), { tipo: 'info', mensaje: 'Prueba: ' + d.caso }); });
+      c.appendChild(b);
+    });
+    const sel = el('select', { 'aria-label': 'Ver estado' });
+    [['', 'Ver estado…'], ['espera', 'Fila de espera'], ['sin_conexion', 'Sin conexión'], ['cuenta', 'Cuenta regresiva'], ['cerrado', 'Cerrado'],
+     ['intentos', 'Demasiados intentos'], ['error', 'Error del sistema'], ['p2', 'Pantalla 2 · elegir'], ['p3', 'Pantalla 3 · confirmación'], ['reset', 'Restablecer']]
+      .forEach(([v, t]) => sel.appendChild(el('option', { value: v }, t)));
+    sel.addEventListener('change', () => { simular(sel.value); sel.value = ''; });
+    c.appendChild(sel);
+    const r = el('button', { type: 'button' }, '↺ Reiniciar datos');
+    r.addEventListener('click', () => { window.CIIC_DEMO.reiniciar(); volverAlInicio({ tipo: 'info', mensaje: 'Datos de prueba reiniciados.' }); refrescar(); });
+    c.appendChild(r);
+    c.appendChild(el('a', { href: 'panel.html', target: '_blank' }, 'Abrir el panel ↗'));
+  }
+  // Fuerza estados visuales para diseñarlos (solo modo demo)
+  async function simular(cual) {
+    simOffline = false; cuenta = null;
+    if (cual === 'reset' || cual === 'cerrado' || cual === 'intentos' || cual === 'error' || cual === 'espera') volverAlInicio(null);
+    if (cual === 'espera') { mensaje($('msg-1'), { tipo: 'espera', mensaje: 'Estás en la fila: hay mucha demanda. Seguimos intentando; no recargues la página.' }); ocupado($('btn-verificar'), true, 'Verificando…'); setTimeout(() => ocupado($('btn-verificar'), false, 'Verificar'), 8000); }
+    if (cual === 'sin_conexion') { simOffline = true; mensaje($('msg-1'), { tipo: 'sin_conexion', mensaje: 'Sin conexión: no se ha enviado nada. Revisa tu internet; la página se actualiza sola al volver.' }); }
+    if (cual === 'cuenta') { cuenta = 90; finCuenta = Date.now() + 90000; }
+    if (cual === 'cerrado') mensaje($('msg-1'), { tipo: 'cerrado', mensaje: 'Las inscripciones están cerradas en este momento. Esta página se actualiza sola cuando abran.' });
+    if (cual === 'intentos') mensaje($('msg-1'), { tipo: 'demasiados_intentos', mensaje: 'Hiciste 4 intentos con documentos que no encontramos. Espera 10 minutos o escríbenos para ayudarte.' });
+    if (cual === 'error') mensaje($('msg-1'), { tipo: 'error_servidor', mensaje: 'Ocurrió un error en el sistema. Intenta de nuevo en unos segundos.', incidencia: 'INC-0007' });
+    if (cual === 'p2') { volverAlInicio(null); $('doc').value = '04567812'; $('form-doc').requestSubmit(); }
+    if (cual === 'p3') {
+      const e = await api({ action: 'estado', conActividades: true }); const acts = e.actividades || [];
+      const muestra = (id, extra) => Object.assign({}, acts.find((a) => a.id === id) || acts[0], extra);
+      confirmacion({ doc: '04567812', etapa: 1, celular: '+51987654321', actividades: [muestra('VIS01', { grupoModo: 'ENLACE', grupo: 'https://chat.whatsapp.com/PRUEBA' }), muestra('TAL10', { grupoModo: 'ENLACE', grupo: '' }), muestra('VIS11', { grupoModo: 'MANUAL', grupo: null })] });
+    }
+    pintarBanner();
+  }
+  const cargarScript = (src) => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+
+  // ── Inicio ──
+  (async () => {
+    if (CFG.NOMBRE_EVENTO) { $('evento').textContent = CFG.NOMBRE_EVENTO; document.title = 'Inscripción · ' + CFG.NOMBRE_EVENTO; }
+    $('pie').textContent = CFG.CONTACTO ? '¿Dudas? Escríbenos: ' + CFG.CONTACTO : (CFG.NOMBRE_EVENTO || '');
+    $('dlg-aviso-texto').textContent = CFG.AVISO_PRIVACIDAD || 'Falta el aviso de privacidad en config.js.';
+    if (DEMO) {
+      try { if (!window.CIIC_DEMO) { await cargarScript('demo/datos-demo.js'); await cargarScript('demo/demo-api.js'); } cintaDemo(); }
+      catch (e) { return mensaje($('msg-1'), { tipo: 'config', mensaje: 'No se pudo cargar el modo demo (carpeta demo/).' }); }
+    } else if (!/^https?:\/\//.test(API) || !ANON || /PEGA_AQUI/.test(API + ANON)) {
+      $('btn-verificar').disabled = true;
+      return mensaje($('msg-1'), { tipo: 'config', mensaje: 'Falta configurar el sistema: pega API_URL y ANON_KEY en config.js, o usa MODO: "demo".' });
+    }
+    refrescar();
+  })();
+})();
+</script>
+</body>
+</html>

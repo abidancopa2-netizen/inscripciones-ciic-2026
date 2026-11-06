@@ -1,0 +1,21 @@
+resultados/
+__pycache__/
+*.pyc
+.venv/
+# Nunca subas datos reales, respaldos ni claves al repositorio (es público)
+*.xlsx
+*.csv
+!local/*_prueba.csv
+!local/padron_importar_ejemplo.csv
+*.dump
+respaldo-*.json
+supabase/03_datos.sql
+local/datos_excel*.sql
+.env
+.env.*
+*.pem
+*.key
+.claude/settings.local.json
+# Entregas de cada sprint: Git ya guarda el historial; solo se suben LEEME.md, aplicar.py y manifiesto.json
+sprints/*/archivos/
+sprints/*/anteriores/

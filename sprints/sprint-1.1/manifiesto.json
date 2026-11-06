@@ -1,0 +1,37 @@
+{
+ "sprint": "sprint-1.1",
+ "siguiente": "reinicia el servidor local y corre medir_local.py y el tester (sin base nueva: no hay SQL).",
+ "archivos": {
+  "local/servidor_local.py": {
+   "base": "f423e91eebbc",
+   "nuevo": "c281fb2fbe2d",
+   "incorpora": "incorpora tu arreglo del pool y lo lleva más lejos: minconn = maxconn"
+  },
+  "tester/tester.py": {
+   "base": "d61dd42aaa8a",
+   "nuevo": "edbca4547920",
+   "incorpora": "incorpora tu arreglo de idioma (ahora por SQLSTATE 22012 y 42501)"
+  },
+  "local/medir_local.py": {
+   "base": "6f4078b0820a",
+   "nuevo": "1d23a2ca0a80"
+  },
+  ".github/workflows/tester.yml": {
+   "base": "c7b43092fa3c",
+   "nuevo": "2af92b56bb21"
+  },
+  ".claude/skills/sql-ciic-inscripciones/SKILL.md": {
+   "base": "d24a570d1a9e",
+   "nuevo": "db7c8659060c"
+  },
+  ".gitignore": {
+   "base": "5db2fb0b5102",
+   "nuevo": "adf56c1523f9",
+   "incorpora": "incorpora tus líneas (.env.*, *.pem, *.key, .venv/, settings.local.json)"
+  },
+  "sprints/PLAN.md": {
+   "base": "8641010ec8cf",
+   "nuevo": "8346a7056f9a"
+  }
+ }
+}

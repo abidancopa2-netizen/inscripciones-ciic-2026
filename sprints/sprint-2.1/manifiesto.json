@@ -1,0 +1,50 @@
+{
+ "sprint": "sprint-2.1",
+ "siguiente": "instala la base desde cero (cambió 04_sprint2_datos.sql), reinicia el servidor local y corre el tester con --web.",
+ "archivos": {
+  "supabase/04_sprint2_datos.sql": {
+   "base": "b5647912a022",
+   "nuevo": "4ffb7bf6ea0e",
+   "incorpora": "incorpora tu arreglo de importar padrón y del orden, y los lleva más lejos (por conjuntos; ORDER BY en la exportación)",
+   "locales": [
+    "a69c643e6618"
+   ]
+  },
+  "tester/tester.py": {
+   "base": "8501da2f15fe",
+   "nuevo": "449ee00b9f3f",
+   "incorpora": "incorpora tu arreglo de la máscara del nombre y suma las pruebas que pediste (Ñ y tildes; 10 000 filas)",
+   "locales": [
+    "2c6f0690a522"
+   ]
+  },
+  "docs/panel.html": {
+   "base": "520681b0228c",
+   "nuevo": "1b352ff32b5e"
+  },
+  "docs/demo/demo-api.js": {
+   "base": "1e0796eec8b1",
+   "nuevo": "4dddb07b92ce"
+  },
+  "local/generar_datos.py": {
+   "base": "868eafed45cb",
+   "nuevo": "206dcebd721e"
+  },
+  "local/armar_demos.py": {
+   "base": "eb4e1d8af654",
+   "nuevo": "157c12c51c66"
+  },
+  ".gitattributes": {
+   "base": null,
+   "nuevo": "69b9992c2af0"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "af247771a440",
+   "nuevo": "db62e3d4e581"
+  },
+  "sprints/PLAN.md": {
+   "base": "e6a6d149f9cd",
+   "nuevo": "c28ba579c34f"
+  }
+ }
+}

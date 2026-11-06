@@ -1,0 +1,73 @@
+# Evita que Supabase pause el proyecto por inactividad (plan gratuito: 7 días con poca actividad)
+# y avisa por correo si la base no responde. Dos veces al día hace una consulta real (action "estado").
+# No usa acciones de terceros: lee config.js publicado en GitHub Pages y llama a la API con curl.
+# Si tu página no está en https://USUARIO.github.io/REPOSITORIO/, crea la variable de repositorio
+# CONFIG_URL (Settings → Secrets and variables → Actions → Variables) con la dirección de tu config.js.
+name: Mantener Supabase activo
+
+on:
+  schedule:
+    - cron: "17 3,15 * * *"   # 03:17 y 15:17 UTC (22:17 y 10:17 en Lima)
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  consultar:
+    name: Consulta a la base
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CONFIG_URL: ${{ vars.CONFIG_URL }}
+      PRUEBA_API_URL: ${{ vars.PRUEBA_API_URL }}
+      PRUEBA_ANON_KEY: ${{ vars.PRUEBA_ANON_KEY }}
+      PRODUCCION_API_URL: ${{ vars.PRODUCCION_API_URL }}
+      PRODUCCION_ANON_KEY: ${{ vars.PRODUCCION_ANON_KEY }}
+    steps:
+      - name: Consultar el estado de cada proyecto
+        shell: bash
+        run: |
+          set -uo pipefail
+          consultar () {        # $1 nombre · $2 API_URL · $3 ANON_KEY
+            local NOMBRE="$1" API="${2%/}" KEY="$3" AUTH=()
+            echo "::add-mask::$KEY"
+            case "$KEY" in eyJ*) AUTH=(-H "Authorization: Bearer $KEY");; esac
+            for intento in 1 2 3; do
+              CODIGO=$(curl -sS -m 30 -o /tmp/r.json -w '%{http_code}' -X POST "$API/rest/v1/rpc/api" \
+                         -H "apikey: $KEY" "${AUTH[@]}" -H "Content-Type: application/json" \
+                         -d '{"p":{"action":"estado"}}') || CODIGO=000
+              if [ "$CODIGO" = "200" ] && jq -e '.tipo == "estado"' /tmp/r.json > /dev/null 2>&1; then
+                echo "$NOMBRE: activo (HTTP 200, estado válido)."; return 0
+              fi
+              echo "$NOMBRE · intento $intento: HTTP $CODIGO o respuesta no válida."; sleep 20
+            done
+            echo "::error::$NOMBRE no respondió. Revisa en Supabase si el proyecto está pausado o caído."; return 1
+          }
+          FALLAS=0
+          # 1 · El proyecto de la página publicada (docs/config.js)
+          URL="${CONFIG_URL:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/config.js}"
+          if CFG=$(curl -sS --fail -m 20 "$URL"); then
+            API=$(printf '%s' "$CFG" | sed -n "s/.*API_URL:[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" | head -1)
+            KEY=$(printf '%s' "$CFG" | sed -n "s/.*ANON_KEY:[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" | head -1)
+            if [ -z "$API" ] || [ -z "$KEY" ] || printf '%s' "$API$KEY" | grep -q PEGA_AQUI; then
+              echo "::warning::config.js todavía no tiene API_URL ni ANON_KEY: se omite el proyecto de la página."
+            else
+              consultar "Proyecto de la página" "$API" "$KEY" || FALLAS=$((FALLAS + 1))
+            fi
+          else
+            echo "::error::No se pudo leer config.js en $URL"; FALLAS=$((FALLAS + 1))
+          fi
+          # 2 y 3 · Los proyectos de PRUEBA y PRODUCCIÓN (en el plan gratuito cada uno se pausa por separado).
+          # Antes de la apertura, la página apunta a PRUEBA: sin las variables PRODUCCION_*, producción no se consultaría.
+          VISTOS=" ${API:-} "
+          for par in "PRUEBA|${PRUEBA_API_URL:-}|${PRUEBA_ANON_KEY:-}" "PRODUCCIÓN|${PRODUCCION_API_URL:-}|${PRODUCCION_ANON_KEY:-}"; do
+            IFS='|' read -r NOMBRE U K <<< "$par"
+            U="${U%/}"
+            if [ -z "$U" ] || [ -z "$K" ]; then
+              echo "::error::Faltan las variables ${NOMBRE//Ó/O}_API_URL y ${NOMBRE//Ó/O}_ANON_KEY: ese proyecto no se consulta y se pausaría a los 7 días."; FALLAS=$((FALLAS + 1)); continue
+            fi
+            case "$VISTOS" in *" $U "*) continue;; esac
+            VISTOS="$VISTOS$U "
+            consultar "Proyecto de $NOMBRE" "$U" "$K" || FALLAS=$((FALLAS + 1))
+          done
+          exit $FALLAS

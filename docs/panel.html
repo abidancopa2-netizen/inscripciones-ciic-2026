@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Panel de organización</title>
+<link rel="stylesheet" href="base.css">
+<script src="config.js"></script>
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PANEL DE ORGANIZACIÓN · contrato v5.5 (documentación, secciones 12 y 14)
+     Para tu diseño: cambia base.css, textos y orden visual. CONSERVA ids,
+     data-tab, data-panel, data-nivel y el bloque <script>. Ver LEEME-DISENO.md.
+     data-nivel="2" o "3": el panel lo oculta a roles menores (la base igual lo rechaza).
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="demo-cinta" id="demo-cinta" data-demo hidden></div>
+<header class="cabecera">
+  <div class="contenido ancho cabecera-fila">
+    <div><h1 id="evento">Panel de organización</h1><p id="sesion">Inicia sesión para continuar</p></div>
+    <button class="boton secundario chico" id="btn-salir" type="button" hidden>Salir</button>
+  </div>
+</header>
+
+<!-- ═════════ Inicio de sesión ═════════ -->
+<main class="contenido" id="vista-login">
+  <section class="tarjeta" id="paso-demo" hidden>
+    <h2>Modo demo</h2>
+    <p class="tenue">Sin Supabase: datos de prueba guardados en este navegador. Elige con qué cuenta entrar para ver lo que permite cada rol.</p>
+    <div class="botones" id="cuentas-demo"></div>
+  </section>
+  <section class="tarjeta" id="paso-clave">
+    <h2>Iniciar sesión</h2>
+    <form id="form-login" novalidate>
+      <label for="correo">Correo</label><input id="correo" type="email" autocomplete="username" required>
+      <label for="clave">Contraseña</label><input id="clave" type="password" autocomplete="current-password" required>
+      <button class="boton ancho-total" id="btn-entrar" type="submit">Entrar</button>
+    </form>
+    <button class="boton secundario ancho-total" id="btn-olvide" type="button">¿Olvidaste tu contraseña?</button>
+    <div id="msg-login" aria-live="polite"></div>
+  </section>
+  <section class="tarjeta" id="paso-codigo" hidden>
+    <h2 id="t-codigo">Código de verificación</h2>
+    <div id="alta-totp" hidden>
+      <p>Primera vez: escanea este código con Google Authenticator, Microsoft Authenticator u otra app de códigos.</p>
+      <img class="qr" id="qr" alt="Código QR para registrar tu app de verificación">
+      <p class="tenue">Si no puedes escanear, escribe esta clave en la app: <code id="secreto"></code></p>
+    </div>
+    <form id="form-codigo" novalidate>
+      <label for="codigo6">Código de 6 dígitos</label>
+      <input id="codigo6" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+      <button class="boton ancho-total" id="btn-codigo" type="submit">Verificar</button>
+    </form>
+    <div id="msg-codigo" aria-live="polite"></div>
+  </section>
+  <section class="tarjeta" id="paso-nueva" hidden>
+    <h2>Crea tu contraseña</h2>
+    <form id="form-nueva" novalidate>
+      <label for="nueva-clave">Nueva contraseña (12 caracteres o más)</label>
+      <input id="nueva-clave" type="password" autocomplete="new-password" minlength="12" required>
+      <button class="boton ancho-total" id="btn-guardar-clave" type="submit">Guardar contraseña</button>
+    </form>
+    <div id="msg-nueva" aria-live="polite"></div>
+  </section>
+  <section class="tarjeta" id="paso-prueba">
+    <button class="boton secundario chico" id="modo-prueba" type="button" aria-expanded="false">Entrar con la clave de prueba</button>
+    <form id="form-prueba" hidden novalidate>
+      <p class="tenue">Solo con la base en modo PRUEBA: es la clave del tester (ADMIN_KEY).</p>
+      <label for="clave-prueba">Clave de prueba</label><input id="clave-prueba" type="password" autocomplete="off">
+      <label for="como-rol">Ver el panel como</label>
+      <select id="como-rol"><option value="propietario">Propietario</option><option value="admin">Admin</option><option value="operador">Operador</option></select>
+      <button class="boton ancho-total" id="btn-entrar-prueba" type="submit">Entrar en modo prueba</button>
+    </form>
+  </section>
+</main>
+
+<!-- ═════════ Panel ═════════ -->
+<main class="contenido ancho" id="vista-app" hidden>
+  <div class="franja" id="estado-sis" role="status"></div>
+  <nav class="pestanas" role="tablist" aria-label="Paneles">
+    <button type="button" role="tab" data-tab="operacion" aria-selected="true">Operación</button>
+    <button type="button" role="tab" data-tab="participantes" aria-selected="false">Participantes</button>
+    <button type="button" role="tab" data-tab="actividades" aria-selected="false">Actividades</button>
+    <button type="button" role="tab" data-tab="listas" aria-selected="false">Listas</button>
+    <button type="button" role="tab" data-tab="sistema" aria-selected="false" data-nivel="3">Sistema</button>
+  </nav>
+
+  <!-- Panel 1 · Operación -->
+  <section data-panel="operacion" role="tabpanel">
+    <div class="rejilla" style="margin-top:16px">
+      <div class="tarjeta">
+        <h3>Estado de las inscripciones</h3>
+        <div class="control"><div><b id="est-txt"></b><small>Cerrar: admin. Abrir: solo el propietario.</small></div><div class="botones" id="est-botones"></div></div>
+        <div class="control" data-nivel="3"><div><b>Etapas que pueden inscribirse</b><small>Quién pasa la pantalla 1.</small></div>
+          <div class="botones"><button type="button" class="chip" data-ins="1">Etapa 1</button><button type="button" class="chip" data-ins="2">Etapa 2</button><button type="button" class="chip" data-ins="3">Etapa 3</button></div></div>
+        <div class="control" data-nivel="3"><div><b>Etapas que pueden elegir visitas</b><small id="nota-visitas"></small></div>
+          <div class="botones"><button type="button" class="chip" data-vis="1">Etapa 1</button><button type="button" class="chip" data-vis="2">Etapa 2</button><button type="button" class="chip" data-vis="3">Etapa 3</button></div></div>
+        <div class="control" data-nivel="3"><div><b>Permitir 2 talleres aunque queden visitas</b><small>Apagado, quien puede elegir visitas debe llevar una mientras queden.</small></div>
+          <button type="button" class="interruptor" role="switch" id="sw-dos" aria-label="Permitir 2 talleres aunque queden visitas"></button></div>
+        <div class="control" data-nivel="2"><div><b>Paso de cupo</b><small>Cuánto suman o restan los botones.</small></div>
+          <div class="botones"><input id="paso" type="number" min="1" max="100" class="corto" aria-label="Paso de cupo"><button class="boton chico" id="btn-paso" type="button">Guardar</button></div></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Totales</h3>
+        <div class="numeros" id="totales"></div>
+        <div id="integridad" style="margin-top:10px"></div>
+        <h3 style="margin-top:18px">Celulares repetidos</h3>
+        <div id="repetidos" class="tenue"></div>
+        <h3 style="margin-top:18px">Últimas inscripciones</h3>
+        <div id="ultimos" class="lista-larga" style="max-height:220px"></div>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <h3>Actividades</h3>
+      <p class="tenue">Ampliar y mostrar se aplican al instante. Reducir y ocultar requieren cerrar las inscripciones.</p>
+      <div class="lista-larga" id="lista-acts"></div>
+    </div>
+    <div class="rejilla">
+      <div class="tarjeta">
+        <h3>Buscar, cambiar o anular</h3>
+        <div class="fila"><input id="q" placeholder="Documento o celular" aria-label="Documento o celular"><button class="boton" id="btn-buscar" type="button">Buscar</button></div>
+        <div id="res-buscar"></div>
+      </div>
+      <div class="tarjeta" data-nivel="2">
+        <h3>Inscribir desde el panel</h3>
+        <p class="tenue">Ignora abierto y etapas; respeta una visita como máximo, los horarios y el padrón. Si una actividad está llena, avisa y amplía su cupo.</p>
+        <div class="formulario">
+          <div><label for="i-doc">Documento</label><input id="i-doc"></div>
+          <div><label for="i-cel">Celular (+51)</label><input id="i-cel" inputmode="tel"></div>
+          <div><label for="i-nombres">Nombres</label><input id="i-nombres"></div>
+          <div><label for="i-apellidos">Apellidos</label><input id="i-apellidos"></div>
+          <div class="completo"><label for="i-correo">Correo institucional</label><input id="i-correo" type="email"></div>
+          <div><label for="i-a1">Actividad 1</label><select id="i-a1"></select></div>
+          <div><label for="i-a2">Actividad 2</label><select id="i-a2"></select></div>
+          <div class="completo"><label class="casilla"><input type="checkbox" id="i-ok"> La persona aceptó el aviso de privacidad y el contacto por WhatsApp</label></div>
+        </div>
+        <button class="boton ancho-total" id="btn-inscribir" type="button">Inscribir</button>
+      </div>
+    </div>
+    <div class="tarjeta" data-nivel="2">
+      <h3>Incidencias</h3>
+      <p class="tenue">Errores internos. La persona solo vio un número; aquí está el detalle.</p>
+      <div id="incidencias" class="tenue"></div>
+    </div>
+  </section>
+
+  <!-- Panel 2 · Participantes -->
+  <section data-panel="participantes" role="tabpanel" hidden>
+    <div class="tarjeta">
+      <div class="numeros" id="p-res"></div>
+      <div class="formulario" style="margin-top:8px">
+        <div><label for="f-etapa">Etapa</label><select id="f-etapa"><option value="">Todas</option><option value="1">Etapa 1</option><option value="2">Etapa 2</option><option value="3">Etapa 3</option></select></div>
+        <div><label for="f-estado">Estado</label><select id="f-estado"><option value="">Todos</option><option value="CONFIRMADO">Inscritos</option><option value="SIN_INSCRIBIR">Sin inscribir</option><option value="ANULADO">Anulados</option></select></div>
+        <div><label for="f-q">Buscar</label><input id="f-q" placeholder="Documento o apellidos"></div>
+      </div>
+      <div class="tabla lista-larga" style="margin-top:12px"><table><thead><tr><th>Documento</th><th>Apellidos, nombres</th><th>Etapa</th><th>Estado</th><th>Código y actividades</th><th>Origen</th><th></th></tr></thead><tbody id="tabla-part"></tbody></table></div>
+      <div class="botones" style="margin-top:10px"><button class="boton secundario chico" id="pag-ant" type="button">← Anterior</button><span id="pag-txt" class="tenue"></span><button class="boton secundario chico" id="pag-sig" type="button">Siguiente →</button></div>
+    </div>
+    <div class="rejilla">
+      <div class="tarjeta" data-nivel="2">
+        <h3>Agregar al padrón de último momento</h3>
+        <p class="tenue">Solo documento y etapa. La etapa no se cambia después.</p>
+        <div class="formulario">
+          <div><label for="a-doc">Documento</label><input id="a-doc"></div>
+          <div><label for="a-etapa">Etapa de venta</label><select id="a-etapa"><option value="1">Etapa 1</option><option value="2">Etapa 2</option><option value="3">Etapa 3</option></select></div>
+        </div>
+        <button class="boton ancho-total" id="btn-alta" type="button">Agregar al padrón</button>
+      </div>
+      <div class="tarjeta" data-nivel="2">
+        <h3>Descargar</h3>
+        <p class="tenue">Cada descarga queda en la bitácora.</p>
+        <div class="botones"><button class="boton secundario" id="csv-ins" type="button">Inscripciones (CSV)</button><button class="boton secundario" id="csv-pad" type="button">Padrón con estado (CSV)</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Panel 3 · Actividades, horarios y grupos -->
+  <section data-panel="actividades" role="tabpanel" hidden>
+    <div class="rejilla" style="margin-top:16px">
+      <div class="tarjeta">
+        <h3>Horarios</h3>
+        <div class="control" data-nivel="3"><div><b>Combinar el mismo día</b><small>Apagado: una actividad por día. Encendido: dos el mismo día si no se cruzan.</small></div>
+          <button type="button" class="interruptor" role="switch" id="sw-mismo" aria-label="Combinar el mismo día"></button></div>
+        <div class="control" data-nivel="3"><div><b>Margen entre actividades</b><small>Minutos mínimos de traslado.</small></div>
+          <div class="botones"><input id="margen" type="number" min="0" max="240" class="corto" aria-label="Margen en minutos"><button class="boton chico" id="btn-margen" type="button">Guardar</button></div></div>
+        <h3 style="margin-top:12px">Cruces de horario</h3>
+        <div id="cruces" class="lista-larga" style="max-height:260px"></div>
+      </div>
+      <div class="tarjeta">
+        <h3>Verificar una solicitud de WhatsApp</h3>
+        <p class="tenue">Para varias solicitudes, usa la pestaña Listas.</p>
+        <label for="wa-act">Actividad del grupo</label><select id="wa-act"></select>
+        <label for="wa-cel">Celular de la solicitud</label><input id="wa-cel" inputmode="tel">
+        <button class="boton ancho-total" id="btn-wa" type="button">Verificar</button>
+        <div id="wa-res" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="tarjeta">
+      <div class="control" style="padding-top:0"><div><h3 style="margin:0">Catálogo de actividades</h3><small>Se crean ocultas; se muestran desde Operación.</small></div>
+        <button class="boton chico" id="btn-nueva" type="button" data-nivel="2">+ Nueva actividad</button></div>
+      <form id="form-act" hidden novalidate>
+        <h3 id="t-form-act"></h3>
+        <div class="formulario">
+          <div><label for="f-tipo">Tipo</label><select id="f-tipo"><option value="VISITA">Visita técnica</option><option value="TALLER">Taller</option></select></div>
+          <div><label for="f-fecha">Fecha (dd/mm/aaaa)</label><input id="f-fecha" placeholder="12/11/2026"></div>
+          <div class="completo"><label for="f-nombre">Nombre</label><input id="f-nombre" maxlength="120"></div>
+          <div class="completo"><label for="f-lugar">Lugar</label><input id="f-lugar" maxlength="120"></div>
+          <div><label for="f-inicio">Inicio (hh:mm)</label><input id="f-inicio" placeholder="08:30"></div>
+          <div><label for="f-fin">Fin (hh:mm)</label><input id="f-fin" placeholder="12:00"></div>
+          <div id="caja-cupo"><label for="f-cupo">Cupo inicial</label><input id="f-cupo" type="number" min="1" max="1000"></div>
+          <div class="completo"><label for="f-desc">Información para el participante (hasta 400 caracteres)</label><textarea id="f-desc" rows="2" maxlength="400"></textarea></div>
+          <div><label for="f-modo">Entrega del grupo</label><select id="f-modo"><option value="ENLACE">Enlace en la confirmación</option><option value="MANUAL">Agregamos a mano</option></select></div>
+          <div><label for="f-grupo">Enlace del grupo de WhatsApp</label><input id="f-grupo" placeholder="https://chat.whatsapp.com/…"></div>
+        </div>
+        <div class="botones" style="margin-top:12px"><button class="boton" id="btn-guardar-act" type="submit">Guardar</button><button class="boton secundario" id="btn-cancelar-act" type="button">Cancelar</button></div>
+      </form>
+      <div class="tabla lista-larga" style="margin-top:12px"><table><thead><tr><th>ID</th><th>Actividad</th><th>Día y hora</th><th>Inscritos</th><th>Grupo</th><th>Estado</th><th></th></tr></thead><tbody id="tabla-acts"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- Panel 3 · Listas por actividad -->
+  <section data-panel="listas" role="tabpanel" hidden>
+    <div class="tarjeta" style="margin-top:16px">
+      <div class="formulario">
+        <div><label for="l-act">Actividad</label><select id="l-act"></select></div>
+        <div><label for="l-etapa">Etapa</label><select id="l-etapa"><option value="">Todas</option><option value="1">Etapa 1</option><option value="2">Etapa 2</option><option value="3">Etapa 3</option></select></div>
+        <div><label for="l-q">Buscar número, DNI o apellidos</label><div class="fila"><input id="l-q" placeholder="+51 987 112 233"><button class="boton chico" id="l-buscar" type="button">Buscar</button></div></div>
+      </div>
+      <div class="numeros" id="l-res" style="margin-top:12px"></div>
+      <div id="l-aviso" aria-live="polite"></div>
+      <div class="botones" style="margin-top:12px">
+        <button class="boton secundario chico" id="l-todos" type="button">Marcar todos agregados</button>
+        <button class="boton secundario chico" id="l-copiar" type="button">Copiar números por agregar</button>
+        <button class="boton secundario chico" id="l-vcf" type="button">Contactos .vcf por agregar</button>
+        <button class="boton secundario chico" id="l-csv" type="button">CSV de esta lista</button>
+        <button class="boton secundario chico" id="l-csv-todas" type="button">CSV de todas</button>
+      </div>
+      <div class="tabla lista-larga" style="margin-top:12px"><table><thead><tr><th>#</th><th>Act.</th><th>Apellidos</th><th>Nombres</th><th>DNI</th><th>Correo</th><th>Celular</th><th>Etapa</th><th>Grupo</th></tr></thead><tbody id="l-tabla"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- Sistema · solo propietario -->
+  <section data-panel="sistema" role="tabpanel" hidden data-nivel="3">
+    <div class="tarjeta" style="margin-top:16px">
+      <h3>Equipo</h3>
+      <p class="tenue">Para crear una cuenta: Supabase → Authentication → Users → Invite user. La persona crea su contraseña y registra su código; aparece aquí sin rol hasta que se lo asignes. El propietario es único y no se modifica desde aquí.</p>
+      <div class="tabla"><table><thead><tr><th>Correo</th><th>Nombre</th><th>Rol</th><th>Código</th><th>Cuenta</th><th></th></tr></thead><tbody id="tabla-equipo"></tbody></table></div>
+    </div>
+    <h2 class="titulo-seccion">De la base de prueba a la real</h2>
+    <p class="tenue">En orden, con las inscripciones cerradas. Todo desde aquí, sin SQL. Formatos de los archivos: guía de diseño, sección 5.</p>
+    <div class="rejilla">
+      <div class="tarjeta" data-paso="1">
+        <h3>1 · Respaldo</h3>
+        <p class="tenue">Un archivo con todas las tablas de datos. Guárdalo en tu computadora o en una memoria USB; nunca en GitHub ni en chats. El día de apertura, uno cada hora.</p>
+        <p id="ultimo-respaldo" class="tenue"></p>
+        <button class="boton ancho-total" id="btn-respaldo" type="button">Descargar respaldo</button>
+      </div>
+      <div class="tarjeta" data-paso="2">
+        <h3>2 · Vaciar datos de prueba</h3>
+        <p class="tenue">Solo en modo PRUEBA. Borra el padrón, las actividades, las inscripciones y la bitácora de prueba. Conserva la configuración y el equipo.</p>
+        <label for="llave-vaciar">Para confirmar, escribe VACIAR</label><input id="llave-vaciar" autocomplete="off">
+        <button class="boton peligro ancho-total" id="btn-vaciar" type="button">Vaciar datos de prueba</button>
+      </div>
+    </div>
+    <div class="tarjeta" data-paso="3">
+      <h3>3 · Importar padrón</h3>
+      <p class="tenue">CSV con dos columnas: documento y etapa. Coma, punto y coma o tabulación; con o sin encabezado; etapa como 1, 2, 3 o "Etapa 1". Desde Excel: Guardar como → CSV UTF-8. Los documentos se normalizan (sin espacios, puntos ni guiones; los DNI de menos de 8 dígitos recuperan sus ceros). Nadie cambia de etapa: si el documento ya existe con otra, se informa como conflicto.</p>
+      <input type="file" id="archivo-padron" accept=".csv,.txt,text/csv">
+      <div id="vista-padron" class="tenue" style="margin-top:10px"></div>
+      <button class="boton" id="btn-importar" type="button" disabled>Importar padrón</button>
+      <div id="informe-padron" aria-live="polite"></div>
+    </div>
+    <div class="tarjeta" data-paso="4">
+      <h3>4 · Importar actividades</h3>
+      <p class="tenue">CSV con encabezado: id (opcional), tipo (VISITA o TALLER), nombre, lugar, fecha (dd/mm/aaaa), inicio, fin (hh:mm), cupo, descripcion, entrega (ENLACE o MANUAL), enlace, visible (SI o NO; por defecto NO). Las que ya existen con el mismo id no se modifican.</p>
+      <input type="file" id="archivo-actividades" accept=".csv,.txt,text/csv">
+      <div id="vista-actividades" class="tenue" style="margin-top:10px"></div>
+      <button class="boton" id="btn-importar-act" type="button" disabled>Importar actividades</button>
+      <div id="informe-actividades" aria-live="polite"></div>
+    </div>
+    <div class="tarjeta" data-paso="5">
+      <h3>5 · Pasar a producción</h3>
+      <p class="tenue">Cuando el padrón y las actividades reales estén cargados y revisados: borra las inscripciones de prueba que hayas hecho, deja intactos el padrón y las actividades, y borra la clave del tester. Descarga un respaldo antes y después.</p>
+      <label for="llave-prod">Para confirmar, escribe PRODUCCION</label><input id="llave-prod" autocomplete="off">
+      <button class="boton peligro ancho-total" id="btn-produccion" type="button">Pasar a producción</button>
+    </div>
+  </section>
+</main>
+
+<div class="avisos" id="avisos" aria-live="polite"></div>
+<dialog id="modal" aria-labelledby="m-tit">
+  <h3 id="m-tit"></h3>
+  <p id="m-txt"></p>
+  <label id="m-caja" hidden><span id="m-lbl"></span><input id="m-entrada" autocomplete="off"></label>
+  <div class="botones" style="margin-top:12px"><button class="boton secundario" id="m-cancelar" type="button">Cancelar</button><button class="boton" id="m-ok" type="button"></button></div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+  const CFG = window.CIIC_CONFIG || {};
+  const DEMO = String(CFG.MODO || '').toLowerCase() === 'demo';
+  const API = String(CFG.API_URL || '').trim().replace(/\/+$/, '');
+  const ANON = String(CFG.ANON_KEY || '').trim();
+  const RANGO = { operador: 1, admin: 2, propietario: 3 };
+  const ESCRITURAS = new Set(['panel_config', 'panel_actividad', 'panel_anular', 'panel_inscribir', 'panel_cambiar', 'panel_padron_agregar', 'panel_padron_quitar',
+    'panel_crear', 'panel_editar', 'panel_quitar', 'panel_horarios', 'panel_cruce', 'panel_equipo_rol', 'panel_equipo_activo', 'panel_grupo_marcar', 'panel_sincronizar',
+    'panel_padron_importar', 'panel_preparar_produccion', 'panel_vaciar_prueba', 'panel_actividades_importar']);
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs, texto) => {
+    const e = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? '' : v); });
+    if (texto != null) e.textContent = texto;
+    return e;
+  };
+  const boton = (texto, attrs, fn) => { const b = el('button', Object.assign({ type: 'button', class: 'boton secundario chico' }, attrs), texto); if (fn) b.addEventListener('click', fn); return b; };
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+  const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+  const flujoClave = /type=(recovery|invite)/.test(location.hash);
+  let sb = null, prueba = null, demoSesion = null, datos = null, rol = null, tRefresco = null, pagina = 1;
+
+  // ── Llamada a la API: lecturas se reintentan; escrituras solo con la MISMA solicitud (R-32) ──
+  async function cabeceras() {
+    const h = { 'Content-Type': 'application/json', apikey: ANON };
+    if (sb && !prueba) { const { data } = await sb.auth.getSession(); if (data.session) h.Authorization = 'Bearer ' + data.session.access_token; }
+    else if (/^eyJ/.test(ANON)) h.Authorization = 'Bearer ' + ANON;
+    return h;
+  }
+  async function api(accion, extra) {
+    const p = Object.assign({ action: accion }, extra || {});
+    if (ESCRITURAS.has(accion) && !p.solicitud) p.solicitud = uuid();
+    if (prueba) { p.key = prueba.clave; p.comoRol = prueba.rol; }
+    let ocupado = null;
+    for (let i = 1; i <= 5; i++) {
+      if (i === 3 && ocupado) aviso({ tipo: 'ocupado', mensaje: 'Hay mucha carga en el sistema: reintentando…' });
+      try {
+        let j;
+        if (DEMO) j = await window.CIIC_DEMO.api(p, { sesion: demoSesion });
+        else { const r = await fetch(API + '/rest/v1/rpc/api', { method: 'POST', headers: await cabeceras(), body: JSON.stringify({ p }) }); j = await r.json(); }
+        if (j && typeof j === 'object' && ('tipo' in j || 'ok' in j) && j.tipo !== 'ocupado') {
+          if (['sin_sesion', 'no_autorizado', 'modo_produccion'].includes(j.tipo) && datos && accion !== 'panel_preparar_produccion') salir(j);
+          if (j.tipo === 'falta_codigo' && datos) pedirCodigo();
+          return j;
+        }
+        if (j && j.tipo === 'ocupado') ocupado = j;
+      } catch (e) { /* red: reintento con la misma solicitud */ }
+      await esperar(Math.min(8000, 500 * 2 ** (i - 1)) * (0.75 + Math.random() * 0.5));
+    }
+    if (ocupado) return { ok: false, tipo: 'ocupado', mensaje: 'El sistema está ocupado y no pudo completar la operación. Inténtalo de nuevo en unos segundos'
+      + (ESCRITURAS.has(accion) ? ': no se hizo dos veces.' : '.') };
+    return { ok: false, tipo: 'sin_conexion', mensaje: 'No hay conexión con el sistema.' };
+  }
+
+  // ── Avisos, ventana de advertencia y descargas ──
+  const ESTILO = { panel: 'exito', registrado: 'exito', advertencia: 'aviso', requiere_cierre: 'aviso', sin_cambios: 'info', ocupado: 'aviso', info: 'info' };
+  function aviso(r, texto) {
+    const c = $('avisos'); c.textContent = '';
+    if (!r) return;
+    const t = texto || ((r.mensaje || 'Listo.') + (r.incidencia ? ' (Incidencia ' + r.incidencia + ')' : ''));
+    c.appendChild(el('div', { class: 'mensaje', 'data-tipo': r.tipo, 'data-estilo': r.ok ? 'exito' : ESTILO[r.tipo] || 'error', role: 'status' }, t));
+    clearTimeout(aviso.t); aviso.t = setTimeout(() => { c.textContent = ''; }, r.ok ? 3500 : 8000);
+  }
+  function mensaje(caja, r) { caja.textContent = ''; if (r) caja.appendChild(el('div', { class: 'mensaje', 'data-tipo': r.tipo, 'data-estilo': r.ok ? 'exito' : ESTILO[r.tipo] || 'error' }, r.mensaje)); }
+  function preguntar(o) {
+    return new Promise((fin) => {
+      const d = $('modal');
+      $('m-tit').textContent = o.titulo; $('m-txt').textContent = o.texto; $('m-ok').textContent = o.ok;
+      $('m-caja').hidden = !o.llave && !o.entrada; $('m-entrada').value = o.entrada ? o.entrada.valor : '';
+      $('m-lbl').textContent = o.llave ? 'Para confirmar, escribe ' + o.llave : o.entrada ? o.entrada.label : '';
+      $('m-ok').disabled = !!o.llave;
+      $('m-entrada').oninput = () => { if (o.llave) $('m-ok').disabled = $('m-entrada').value.trim().toUpperCase() !== o.llave; };
+      const cerrar = (v) => { d.close(); fin(v); };
+      $('m-ok').onclick = () => cerrar(o.entrada ? $('m-entrada').value : true);
+      $('m-cancelar').onclick = () => cerrar(false);
+      d.oncancel = () => fin(false);
+      d.showModal(); (o.llave || o.entrada ? $('m-entrada') : $('m-cancelar')).focus();
+    });
+  }
+  async function conAdvertencia(accion, extra, opciones) {      // si la base responde "advertencia", pregunta y reenvía confirmando
+    let r = await api(accion, extra);
+    if (r.tipo === 'advertencia') { const o = opciones(r); if (!(await preguntar(o))) return null; r = await api(accion, Object.assign({}, extra, o.extra)); }
+    return r;
+  }
+  const ampliar = (titulo) => (r) => ({ titulo, texto: r.mensaje + ' Quedará anotado en la bitácora con tu nombre.', ok: 'Continuar y ampliar', llave: (r.ids || []).join(' '), extra: { ampliarCupo: true } });
+  async function accion(nombre, extra, textoOk) { const r = await api(nombre, extra); aviso(r, r.ok ? textoOk : null); if (r.ok) await refrescar(); return r; }
+  const celdaCSV = (v) => { let t = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };   // R-39: neutraliza fórmulas
+  function descargar(nombre, contenido, tipo) {
+    const a = el('a', { href: URL.createObjectURL(new Blob([contenido], { type: tipo })), download: nombre });
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  const csv = (nombre, r) => descargar(nombre, '\ufeff' + [r.encabezados].concat(r.filas).map((f) => f.map(celdaCSV).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+  const fechaArchivo = () => new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '').replace(/(\d{8})(\d{4})/, '$1-$2');
+
+  // ── Sesión ──
+  function mostrar(v) { $('vista-login').hidden = v !== 'login'; $('vista-app').hidden = v !== 'app'; $('btn-salir').hidden = v !== 'app'; }
+  function pasoLogin(cual) { ['paso-clave', 'paso-codigo', 'paso-nueva'].forEach((id) => { $(id).hidden = id !== cual; }); mostrar('login'); }
+  function aplicarNivel() {      // los paneles de pestaña los maneja el clic en la pestaña
+    document.querySelectorAll('[data-nivel]:not([data-panel])').forEach((x) => { x.hidden = (RANGO[rol] || 0) < +x.dataset.nivel; });
+  }
+  async function entrar() {
+    const r = await api('panel_resumen');
+    if (r.tipo === 'falta_codigo') return pedirCodigo();
+    if (r.tipo !== 'panel') { mensaje($('msg-login'), r); return mostrar('login'); }
+    datos = r; rol = r.sesion.rol;
+    $('sesion').textContent = r.sesion.nombre + ' · ' + rol + (DEMO ? ' (demo)' : r.sesion.tester ? ' (modo prueba)' : '');
+    aplicarNivel(); mostrar('app'); pintar(); programar();
+    const activa = document.querySelector('[data-tab][aria-selected="true"]');
+    if (activa && activa.hidden) document.querySelector('[data-tab="operacion"]').click();
+  }
+  function salir(r) {
+    clearTimeout(tRefresco); datos = null; prueba = null; demoSesion = null;
+    if (sb) sb.auth.signOut();
+    pasoLogin('paso-clave'); if (DEMO) { $('paso-clave').hidden = true; }
+    $('sesion').textContent = 'Inicia sesión para continuar';
+    mensaje($('msg-login'), r || null);
+  }
+  let factor = null;
+  async function pedirCodigo() {
+    pasoLogin('paso-codigo');
+    if (!sb) return;
+    const { data } = await sb.auth.mfa.listFactors();
+    const ok = (data && data.totp || []).find((f) => f.status === 'verified');
+    if (ok) { factor = ok.id; $('alta-totp').hidden = true; $('t-codigo').textContent = 'Código de verificación'; }
+    else {
+      const { data: alta, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+      if (error) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: error.message });
+      factor = alta.id; $('qr').src = alta.totp.qr_code; $('secreto').textContent = alta.totp.secret;
+      $('alta-totp').hidden = false; $('t-codigo').textContent = 'Registra tu app de verificación';
+    }
+    $('codigo6').focus();
+  }
+  $('form-login').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!sb) return mensaje($('msg-login'), { tipo: 'error', mensaje: 'No se pudo cargar el inicio de sesión. Revisa tu conexión.' });
+    $('btn-entrar').disabled = true;
+    const { error } = await sb.auth.signInWithPassword({ email: $('correo').value.trim(), password: $('clave').value });
+    $('btn-entrar').disabled = false;
+    if (error) return mensaje($('msg-login'), { tipo: 'no_autorizado', mensaje: 'Correo o contraseña incorrectos.' });
+    pedirCodigo();
+  });
+  $('form-codigo').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId: factor });
+    if (e1) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: e1.message });
+    const { error } = await sb.auth.mfa.verify({ factorId: factor, challengeId: ch.id, code: $('codigo6').value.trim() });
+    if (error) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: 'Código incorrecto o vencido. Escribe el que muestra ahora tu app.' });
+    $('codigo6').value = ''; entrar();
+  });
+  $('btn-olvide').addEventListener('click', async () => {
+    const correo = $('correo').value.trim();
+    if (!correo) return mensaje($('msg-login'), { tipo: 'datos_invalidos', mensaje: 'Escribe tu correo arriba y vuelve a pulsar.' });
+    if (sb) await sb.auth.resetPasswordForEmail(correo, { redirectTo: location.origin + location.pathname });
+    mensaje($('msg-login'), { ok: true, tipo: 'panel', mensaje: 'Si el correo tiene cuenta, te llegará un enlace para crear una nueva contraseña.' });
+  });
+  $('form-nueva').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const c = $('nueva-clave').value;
+    if (c.length < 12) return mensaje($('msg-nueva'), { tipo: 'datos_invalidos', mensaje: 'Usa 12 caracteres o más.' });
+    const { error } = await sb.auth.updateUser({ password: c });
+    if (error) return mensaje($('msg-nueva'), { tipo: 'error', mensaje: error.message });
+    history.replaceState(null, '', location.pathname); pedirCodigo();
+  });
+  $('modo-prueba').addEventListener('click', () => { const f = $('form-prueba'); f.hidden = !f.hidden; $('modo-prueba').setAttribute('aria-expanded', String(!f.hidden)); });
+  $('form-prueba').addEventListener('submit', (ev) => { ev.preventDefault(); prueba = { clave: $('clave-prueba').value.trim(), rol: $('como-rol').value }; entrar(); });
+  $('btn-salir').addEventListener('click', () => salir(null));
+
+  // ── Pestañas ──
+  document.querySelectorAll('[data-tab]').forEach((t) => t.addEventListener('click', () => {
+    document.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab || (p.dataset.nivel && (RANGO[rol] || 0) < +p.dataset.nivel); });
+    if (t.dataset.tab === 'participantes') cargarParticipantes();
+    if (t.dataset.tab === 'listas') cargarLista();
+    if (t.dataset.tab === 'sistema') { cargarEquipo(); pintarRespaldo(); }
+  }));
+  const irA = (tab) => document.querySelector('[data-tab="' + tab + '"]').click();
+
+  // ── Refresco del resumen (cada 20 s con la pestaña visible) ──
+  async function refrescar() { const r = await api('panel_resumen'); if (r.tipo === 'panel') { datos = r; pintar(); } }
+  function programar() { clearTimeout(tRefresco); if (!document.hidden && datos && !simulando) tRefresco = setTimeout(async () => { await refrescar(); programar(); }, 20000); }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && datos) { refrescar(); programar(); } });
+  let finCuenta = null;
+  setInterval(() => { if (finCuenta && datos) pintarFranja(); }, 1000);
+  const mmss = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  function pintarFranja() {
+    const c = datos.config, t = datos.trafico || {}, f = $('estado-sis');
+    const s = finCuenta ? Math.max(0, Math.ceil((finCuenta - Date.now()) / 1000)) : null;
+    f.dataset.estado = c.abierto ? 'abierto' : 'cerrado';
+    f.dataset.alerta = t.alerta ? 'si' : 'no';
+    f.textContent = (t.alerta ? '⚠ SATURACIÓN SOSTENIDA: más de ' + t.umbral + ' llamadas por ventana de 10 s durante 30 s · ' : '') +
+      (c.abierto ? 'ABIERTO · ronda ' + c.ronda + (s != null ? ' · se cierra en ' + mmss(s) : '') + ' · solo se permiten cambios que agregan opciones'
+                 : 'CERRADO · ronda ' + c.ronda + ' · puedes hacer los cambios que quitan opciones') + (c.modo === 'PRUEBA' ? ' · modo PRUEBA' : '');
+    $('est-txt').textContent = c.abierto ? (s != null ? 'Abiertas · se cierran en ' + mmss(s) : 'Abiertas · ronda ' + c.ronda) : 'Cerradas · ronda ' + c.ronda;
+    if (s === 0) { finCuenta = null; setTimeout(refrescar, 1200); }
+  }
+
+  // ── Pintar todo ──
+  function pintar() {
+    const c = datos.config;
+    finCuenta = c.cierraEn != null ? Date.now() + c.cierraEn * 1000 : null;
+    pintarFranja(); pintarEstado();
+    document.querySelectorAll('[data-ins]').forEach((b) => b.setAttribute('aria-pressed', String(c.etapas.includes(+b.dataset.ins))));
+    document.querySelectorAll('[data-vis]').forEach((b) => b.setAttribute('aria-pressed', String(c.etapasVisita.includes(+b.dataset.vis))));
+    const sueltas = c.etapasVisita.filter((e) => !c.etapas.includes(e));
+    $('nota-visitas').textContent = sueltas.length ? 'La Etapa ' + sueltas.join(' y ') + ' tiene visitas pero no inscripción: no hace nada hasta que la habilites arriba.' : 'Las etapas inscritas sin visitas se inscriben en 2 talleres.';
+    $('sw-dos').setAttribute('aria-checked', String(c.dosTalleres));
+    if (document.activeElement !== $('paso')) $('paso').value = c.pasoCupo;
+    $('sw-mismo').setAttribute('aria-checked', String(c.mismoDia));
+    if (document.activeElement !== $('margen')) $('margen').value = c.margenMin;
+    pintarTotales(); pintarActividades(); pintarCruces(); pintarCatalogo(); pintarSelects();
+    if ((RANGO[rol] || 0) >= 2) cargarIncidencias();
+  }
+  function pintarEstado() {
+    const c = datos.config, caja = $('est-botones');
+    const modo = (!c.abierto ? 'cerrado' : c.cierraEn != null ? 'aviso' : 'abierto') + rol;
+    if (caja.dataset.modo === modo) return;
+    caja.dataset.modo = modo; caja.textContent = '';
+    if (!c.abierto) { if (RANGO[rol] >= 3) caja.appendChild(boton('Abrir inscripciones', { class: 'boton chico', id: 'btn-abrir' }, async () => {
+      if (await preguntar({ titulo: 'Abrir inscripciones', texto: 'Se abre la ronda ' + datos.config.ronda + '. Quien tenga la página abierta desde antes del cierre tendrá que volver a verificar.', ok: 'Abrir' }))
+        accion('panel_config', { abierto: true }, 'Inscripciones abiertas.');
+    })); return; }
+    if (RANGO[rol] < 2) return;
+    caja.appendChild(boton('Cerrar ahora', { class: 'boton peligro chico', id: 'btn-cerrar' }, async () => {
+      const r = await conAdvertencia('panel_config', { abierto: false }, (x) => ({ titulo: 'Cerrar y depurar ahora', texto: x.mensaje, ok: 'Cerrar ahora', extra: { confirmar: true } }));
+      if (r) { aviso(r, r.ok ? 'Inscripciones cerradas.' : null); refrescar(); }
+    }));
+    if (c.cierraEn != null) caja.appendChild(boton('Cancelar aviso', {}, () => accion('panel_config', { cancelarAviso: true }, 'Aviso cancelado.')));
+    else {
+      const s = el('select', { id: 'min-aviso', 'aria-label': 'Minutos de aviso', class: 'corto' });
+      [1, 2, 5, 10].forEach((m) => s.appendChild(el('option', { value: m, selected: m === 2 }, m + ' min')));
+      caja.appendChild(s);
+      caja.appendChild(boton('Avisar y cerrar', {}, () => accion('panel_config', { avisarCierreMin: +s.value }, 'Aviso enviado: las páginas muestran la cuenta regresiva.')));
+    }
+  }
+  function numero(caja, v, t) { const d = el('div'); d.appendChild(el('b', {}, String(v))); d.appendChild(document.createTextNode(t)); caja.appendChild(d); }
+  function pintarTotales() {
+    const t = datos.totales, tr = datos.trafico || {}, caja = $('totales'); caja.textContent = '';
+    numero(caja, t.inscritos, 'inscritos'); numero(caja, t.porEtapa['1'], 'Etapa 1'); numero(caja, t.porEtapa['2'], 'Etapa 2'); numero(caja, t.porEtapa['3'], 'Etapa 3');
+    numero(caja, t.visitas.ocupados + '/' + t.visitas.cupo, 'cupos de visita'); numero(caja, t.porOrigen.PANEL, 'desde el panel'); numero(caja, t.anulados, 'anuladas');
+    numero(caja, t.fallos10min, 'DNI fallidos (10 min)'); numero(caja, t.frenados, 'frenados'); numero(caja, tr.ventana10s || 0, 'llamadas en 10 s'); numero(caja, tr.pico10s || 0, 'pico en 10 s');
+    const ig = $('integridad'); ig.textContent = '';
+    const ok = datos.integridad && datos.integridad.ok;
+    ig.appendChild(el('div', { class: 'mensaje', 'data-estilo': ok ? 'exito' : 'error', 'data-tipo': ok ? 'integridad_ok' : 'integridad_rota' },
+      ok ? 'Integridad OK: cada contador coincide con sus inscripciones.' : 'Integridad: descuadre en ' + datos.integridad.descuadres.join(', ') + '.'));
+    if (RANGO[rol] >= 2) ig.appendChild(boton('Recontar inscritos', { id: 'btn-recontar', style: 'margin-top:6px' }, () => accion('panel_sincronizar', {}, 'Contadores recalculados desde las inscripciones.')));
+    const rep = $('repetidos'); rep.textContent = datos.repetidos.length ? '' : 'Ninguno.';
+    datos.repetidos.forEach((x) => rep.appendChild(el('div', {}, x.celular + ' · ' + x.personas.map((p) => p.nombre + ' (' + p.codigo + ')').join(', '))));
+    const ul = $('ultimos'); ul.textContent = datos.ultimos.length ? '' : 'Aún no hay inscripciones.';
+    datos.ultimos.forEach((x) => ul.appendChild(el('div', { class: 'act' }, String(x.fecha).slice(11, 16) + ' · ' + x.codigo + ' · ' + x.nombre + ' · ' + x.actividades.join(' + ') + ' · ' + x.origen)));
+  }
+  async function cargarIncidencias() {
+    const r = await api('panel_incidencias'); const caja = $('incidencias'); caja.textContent = '';
+    if (!r.ok) return;
+    if (!r.incidencias.length) return caja.appendChild(document.createTextNode('Sin incidencias.'));
+    r.incidencias.slice(0, 10).forEach((x) => caja.appendChild(el('div', { class: 'act' }, x.id + ' · ' + x.fecha + ' · ' + x.accion + ' · ' + x.detalle)));
+  }
+  function pintarActividades() {
+    const paso = datos.config.pasoCupo, cont = $('lista-acts'); cont.textContent = '';
+    datos.actividades.forEach((a) => {
+      const fila = el('div', { class: 'act', 'data-publicada': String(a.publicada), 'data-id': a.id });
+      const izq = el('div');
+      izq.appendChild(el('b', {}, a.id + ' · ')); izq.appendChild(document.createTextNode(a.nombre));
+      const barra = el('div', { class: 'barra' }); barra.appendChild(el('span', { style: 'width:' + Math.min(100, a.inscritos / Math.max(1, a.capacidad) * 100) + '%', 'data-llena': String(a.lleno) }));
+      izq.appendChild(barra);
+      izq.appendChild(el('small', {}, a.fecha.slice(0, 5) + ' ' + a.inicio + '–' + a.fin + ' · ' + a.inscritos + ' / ' + a.capacidad + (a.capacidad > a.cupoInicial ? ' · ampliada desde ' + a.cupoInicial : '') +
+        (a.lleno ? ' · llena' : '') + (a.publicada ? '' : ' · oculta')));
+      fila.appendChild(izq);
+      if (RANGO[rol] >= 2) {
+        const b = el('div', { class: 'botones' });
+        b.appendChild(boton('−' + paso, { 'data-menos': a.id, title: 'Quita opciones: requiere cerrar' }, () => cupo(a, a.capacidad - paso)));
+        b.appendChild(boton('+' + paso, { 'data-mas': a.id }, () => cupo(a, a.capacidad + paso)));
+        b.appendChild(boton('Cupo…', { 'data-cupo': a.id }, async () => {
+          const v = await preguntar({ titulo: 'Cupo de ' + a.id, texto: a.nombre + ' · ' + a.inscritos + ' inscritos.', ok: 'Guardar cupo', entrada: { label: 'Nuevo cupo', valor: String(a.capacidad) } });
+          if (v !== false) cupo(a, +v);
+        }));
+        b.appendChild(boton(a.publicada ? 'Ocultar' : 'Mostrar', { 'data-ver': a.id }, () => accion('panel_actividad', { id: a.id, publicada: !a.publicada }, a.id + (a.publicada ? ' oculta.' : ' visible.'))));
+        fila.appendChild(b);
+      }
+      cont.appendChild(fila);
+    });
+  }
+  async function cupo(a, nuevo) {      // siempre el cupo final (D4)
+    const r = await conAdvertencia('panel_actividad', { id: a.id, cupo: nuevo }, (x) => ({ titulo: 'Bajar el cupo de ' + a.id, texto: x.mensaje, ok: 'Dejarla en ' + x.minimo + ' y cerrarla', extra: { confirmar: true } }));
+    if (!r) return;
+    aviso(r, r.ok ? a.id + ': cupo ' + r.actividad.capacidad + '.' : null);
+    if (r.ok) refrescar();
+  }
+  const opciones = (vacia, todas) => {
+    const f = document.createDocumentFragment();
+    if (vacia) f.appendChild(el('option', { value: '' }, todas ? 'Todas las actividades' : '—'));
+    datos.actividades.forEach((a) => f.appendChild(el('option', { value: a.id }, a.fecha.slice(0, 5) + ' ' + a.inicio + ' · ' + a.id + ' · ' + a.nombre.slice(0, 32) + ' (' + a.inscritos + '/' + a.capacidad + ')')));
+    return f;
+  };
+  function pintarSelects() {
+    [['i-a1', true], ['i-a2', true], ['wa-act', false], ['l-act', true, true]].forEach(([id, vacia, todas]) => {
+      const s = $(id), v = s.value, primera = !s.options.length; s.textContent = ''; s.appendChild(opciones(vacia, todas));
+      s.value = primera && id === 'l-act' ? (datos.actividades[0] || {}).id : v;
+    });
+  }
+
+  // Etapas y reglas (nivel 3)
+  const cfg = (c) => accion('panel_config', c, 'Configuración guardada.');
+  document.querySelectorAll('[data-ins]').forEach((b) => b.addEventListener('click', () => { const n = +b.dataset.ins, e = datos.config.etapas; cfg({ etapas: e.includes(n) ? e.filter((x) => x !== n) : e.concat(n) }); }));
+  document.querySelectorAll('[data-vis]').forEach((b) => b.addEventListener('click', () => { const n = +b.dataset.vis, e = datos.config.etapasVisita; cfg({ etapasVisita: e.includes(n) ? e.filter((x) => x !== n) : e.concat(n) }); }));
+  $('sw-dos').addEventListener('click', () => cfg({ dosTalleres: !datos.config.dosTalleres }));
+  $('btn-paso').addEventListener('click', () => cfg({ pasoCupo: $('paso').value }));
+
+  // Buscar, cambiar, anular
+  async function buscar() {
+    const r = await api('panel_buscar', { q: $('q').value });
+    const caja = $('res-buscar'); caja.textContent = '';
+    if (!r.ok) return mensaje(caja, r);
+    if (r.etapa) caja.appendChild(el('p', { class: 'tenue' }, 'En el padrón: Etapa ' + r.etapa + '.'));
+    if (!r.registros.length) return caja.appendChild(el('p', { class: 'tenue' }, 'Sin inscripciones con ese documento o celular.'));
+    r.registros.forEach((i) => {
+      const d = el('div', { class: 'act', style: 'display:block' });
+      d.appendChild(el('b', {}, i.codigo + ' · ' + i.apellidos + ', ' + i.nombres));
+      d.appendChild(el('small', { style: 'display:block' }, i.doc + ' · ' + i.celular + ' · ' + i.correo + ' · Etapa ' + i.etapa + ' · ' + i.origen + ' · ' + i.actividades.map((a) => a.id).join(' + ')));
+      d.appendChild(el('span', { class: 'estado', 'data-v': i.estado }, i.estado));
+      if (i.estado === 'CONFIRMADO' && RANGO[rol] >= 2) {
+        const b = el('div', { class: 'botones', style: 'margin-top:8px' });
+        const s1 = el('select', { 'aria-label': 'Nueva actividad 1' }); s1.appendChild(opciones(false)); s1.value = i.actividades[0] && i.actividades[0].id;
+        const s2 = el('select', { 'aria-label': 'Nueva actividad 2' }); s2.appendChild(opciones(false)); s2.value = i.actividades[1] && i.actividades[1].id;
+        const cambio = el('div', { class: 'formulario', hidden: true }); cambio.appendChild(s1); cambio.appendChild(s2);
+        cambio.appendChild(boton('Hacer el cambio', { class: 'boton chico' }, async () => {
+          const x = await conAdvertencia('panel_cambiar', { codigo: i.codigo, actividades: [s1.value, s2.value] }, ampliar('Cambiar y ampliar cupo'));
+          if (!x) return;
+          aviso(x, x.ok ? i.codigo + ': ' + x.antes.join(' + ') + ' → ' + x.ahora.join(' + ') + '. Mismo código.' : null);
+          if (x.ok) { refrescar(); buscar(); }
+        }));
+        b.appendChild(boton('Cambiar inscripción', {}, () => { cambio.hidden = !cambio.hidden; }));
+        b.appendChild(boton('Anular y liberar cupos', {}, async () => {
+          if (!(await preguntar({ titulo: 'Anular ' + i.codigo, texto: 'Se liberan sus 2 cupos y la persona podrá volver a inscribirse.', ok: 'Anular' }))) return;
+          await accion('panel_anular', { codigo: i.codigo }, i.codigo + ' anulada.'); buscar();
+        }));
+        d.appendChild(b); d.appendChild(cambio);
+      }
+      caja.appendChild(d);
+    });
+  }
+  $('btn-buscar').addEventListener('click', buscar);
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') buscar(); });
+  $('btn-inscribir').addEventListener('click', async () => {
+    const r = await conAdvertencia('panel_inscribir', { dni: $('i-doc').value, nombres: $('i-nombres').value, apellidos: $('i-apellidos').value, correo: $('i-correo').value,
+      celular: $('i-cel').value, pais: 'PE', aceptaPrivacidad: $('i-ok').checked, aceptaWhatsapp: $('i-ok').checked, actividades: [$('i-a1').value, $('i-a2').value].filter(Boolean) }, ampliar('Inscribir y ampliar cupo'));
+    if (!r) return;
+    aviso(r, r.ok ? 'Inscrito con el código ' + r.codigo + ((r.ampliadas || []).length ? ' · se amplió ' + r.ampliadas.join(' y ') : '') + '.' : null);
+    if (r.ok) { ['i-doc', 'i-nombres', 'i-apellidos', 'i-correo', 'i-cel'].forEach((id) => { $(id).value = ''; }); $('i-ok').checked = false; refrescar(); }
+  });
+
+  // ── Participantes ──
+  const ESTADOS = { SIN_INSCRIBIR: 'Sin inscribir', CONFIRMADO: 'Inscrito', ANULADO: 'Anulado' };
+  async function cargarParticipantes() {
+    const r = await api('panel_participantes', { etapa: $('f-etapa').value || null, estado: $('f-estado').value || null, q: $('f-q').value, pagina });
+    if (!r.ok) return aviso(r);
+    const res = $('p-res'); res.textContent = '';
+    numero(res, r.resumen.padron, 'en el padrón'); numero(res, r.resumen.inscritos, 'inscritos'); numero(res, r.resumen.sinInscribir, 'sin inscribir'); numero(res, r.resumen.agregados, 'agregados en el panel');
+    const tb = $('tabla-part'); tb.textContent = '';
+    if (!r.filas.length) { const tr = el('tr'); tr.appendChild(el('td', { colspan: 7, class: 'tenue' }, 'Nadie coincide con el filtro.')); tb.appendChild(tr); }
+    r.filas.forEach((f) => {
+      const tr = el('tr');
+      tr.appendChild(el('td', {}, f.doc)); tr.appendChild(el('td', {}, f.nombre || '—')); tr.appendChild(el('td', {}, 'Etapa ' + f.etapa));
+      const e = el('td'); e.appendChild(el('span', { class: 'estado', 'data-v': f.estado }, ESTADOS[f.estado])); tr.appendChild(e);
+      tr.appendChild(el('td', {}, f.codigo ? f.codigo + ' · ' + f.actividades.join(' + ') : '—'));
+      tr.appendChild(el('td', {}, f.origen));
+      const acc = el('td');
+      if (f.estado !== 'CONFIRMADO' && RANGO[rol] >= 2) {
+        acc.appendChild(boton('Inscribir', {}, () => { irA('operacion'); $('i-doc').value = f.doc; $('i-doc').scrollIntoView({ block: 'center' }); $('i-nombres').focus(); }));
+        acc.appendChild(boton('Quitar', {}, async () => {
+          if (!(await preguntar({ titulo: 'Quitar del padrón', texto: f.doc + ' deja de poder inscribirse.', ok: 'Quitar' }))) return;
+          const x = await api('panel_padron_quitar', { documento: f.doc }); aviso(x, x.ok ? f.doc + ' quitado del padrón.' : null); if (x.ok) cargarParticipantes();
+        }));
+      }
+      tr.appendChild(acc); tb.appendChild(tr);
+    });
+    const paginas = Math.max(1, Math.ceil(r.total / r.porPagina));
+    $('pag-txt').textContent = 'Página ' + r.pagina + ' de ' + paginas + ' · ' + r.total + ' personas';
+    $('pag-ant').disabled = r.pagina <= 1; $('pag-sig').disabled = r.pagina >= paginas;
+  }
+  ['f-etapa', 'f-estado'].forEach((id) => $(id).addEventListener('change', () => { pagina = 1; cargarParticipantes(); }));
+  $('f-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { pagina = 1; cargarParticipantes(); } });
+  $('pag-ant').addEventListener('click', () => { pagina--; cargarParticipantes(); });
+  $('pag-sig').addEventListener('click', () => { pagina++; cargarParticipantes(); });
+  $('btn-alta').addEventListener('click', async () => {
+    const r = await api('panel_padron_agregar', { documento: $('a-doc').value, etapa: +$('a-etapa').value });
+    aviso(r, r.ok ? r.doc + ' agregado a la Etapa ' + r.etapa + '.' : null);
+    if (r.ok) { $('a-doc').value = ''; cargarParticipantes(); }
+  });
+  $('csv-ins').addEventListener('click', async () => { const r = await api('panel_registros', { formato: 'inscripciones' }); if (r.ok) csv('inscripciones-' + fechaArchivo() + '.csv', r); else aviso(r); });
+  $('csv-pad').addEventListener('click', async () => { const r = await api('panel_registros', { formato: 'padron' }); if (r.ok) csv('padron-' + fechaArchivo() + '.csv', r); else aviso(r); });
+
+  // ── Actividades, horarios y grupos ──
+  $('sw-mismo').addEventListener('click', () => accion('panel_horarios', { mismoDia: !datos.config.mismoDia }, 'Horarios guardados.'));
+  $('btn-margen').addEventListener('click', () => accion('panel_horarios', { margenMin: $('margen').value }, 'Margen guardado.'));
+  function pintarCruces() {
+    const caja = $('cruces'); caja.textContent = '';
+    if (!datos.config.mismoDia) caja.appendChild(el('p', { class: 'tenue' }, 'Con "una actividad por día" ningún cruce afecta a nadie.'));
+    if (!datos.cruces.length) return caja.appendChild(el('p', { class: 'tenue' }, 'No hay cruces con el margen actual.'));
+    datos.cruces.forEach((x) => {
+      const d = el('div', { class: 'act' });
+      d.appendChild(el('span', {}, x.a + ' × ' + x.b + ' · ' + x.fecha.slice(0, 5) + (x.permitido ? ' · permitido' : '')));
+      if (RANGO[rol] >= 2) d.appendChild(boton(x.permitido ? 'Bloquear' : 'Permitir', { 'data-cruce': x.a + '|' + x.b }, () =>
+        accion('panel_cruce', { a: x.a, b: x.b, permitido: !x.permitido }, x.a + ' × ' + x.b + (x.permitido ? ' bloqueado.' : ' permitido.'))));
+      caja.appendChild(d);
+    });
+  }
+  $('btn-wa').addEventListener('click', async () => {
+    const r = await api('panel_verificar_celular', { id: $('wa-act').value, celular: $('wa-cel').value });
+    mensaje($('wa-res'), !r.ok ? r : r.inscrito ? { ok: true, tipo: 'panel', mensaje: 'Sí: ' + r.nombre + ' (' + r.codigo + ') está inscrito en ' + r.id + '. Aprueba la solicitud.' }
+                                               : { tipo: 'no_inscrito', mensaje: 'No hay nadie inscrito en ' + r.id + ' con ese celular. Rechaza la solicitud.' });
+  });
+  let editando = null;
+  function pintarCatalogo() {
+    const tb = $('tabla-acts'); tb.textContent = '';
+    datos.actividades.forEach((a) => {
+      const tr = el('tr');
+      tr.appendChild(el('td', {}, a.id));
+      const n = el('td'); n.appendChild(el('b', {}, a.nombre)); n.appendChild(el('small', { style: 'display:block' }, a.lugar)); tr.appendChild(n);
+      tr.appendChild(el('td', {}, a.fecha + ' · ' + a.inicio + '–' + a.fin));
+      tr.appendChild(el('td', {}, a.inscritos + ' / ' + a.capacidad + (a.capacidad !== a.cupoInicial ? ' (inicial ' + a.cupoInicial + ')' : '')));
+      const g = el('td'); g.appendChild(el('span', { class: 'estado', 'data-v': a.grupoModo === 'MANUAL' ? 'neutro' : a.grupo ? 'ok' : 'aviso' }, a.grupoModo === 'MANUAL' ? 'a mano' : a.grupo ? 'enlace' : 'pendiente')); tr.appendChild(g);
+      const e = el('td'); e.appendChild(el('span', { class: 'estado', 'data-v': a.publicada ? 'ok' : 'neutro' }, a.publicada ? 'visible' : 'oculta')); tr.appendChild(e);
+      const acc = el('td');
+      acc.appendChild(boton('Ver lista', {}, () => { $('l-act').value = a.id; irA('listas'); }));
+      if (RANGO[rol] >= 2) {
+        acc.appendChild(boton('Editar', { 'data-editar': a.id }, () => abrirForm(a)));
+        if (!a.publicada && !a.inscritos) acc.appendChild(boton('Quitar', {}, async () => {
+          if (await preguntar({ titulo: 'Quitar ' + a.id, texto: a.nombre + ' se borra del catálogo.', ok: 'Quitar' })) accion('panel_quitar', { id: a.id }, a.id + ' quitada.');
+        }));
+      }
+      tr.appendChild(acc); tb.appendChild(tr);
+    });
+  }
+  function abrirForm(a) {
+    editando = a ? a.id : null; $('form-act').hidden = false;
+    $('t-form-act').textContent = a ? 'Editar ' + a.id + (a.inscritos ? ' · ' + a.inscritos + ' inscritos: tipo, fecha y horario fijos' : '') : 'Nueva actividad (nace oculta)';
+    const v = a || { tipo: 'VISITA', nombre: '', lugar: '', fecha: '', inicio: '09:00', fin: '12:00', descripcion: '', grupoModo: 'ENLACE', grupo: '' };
+    $('f-tipo').value = v.tipo; $('f-nombre').value = v.nombre; $('f-lugar').value = v.lugar; $('f-fecha').value = v.fecha; $('f-inicio').value = v.inicio; $('f-fin').value = v.fin;
+    $('f-desc').value = v.descripcion || ''; $('f-modo').value = v.grupoModo; $('f-grupo').value = v.grupo || ''; $('caja-cupo').hidden = !!a; $('f-cupo').value = 20;
+    $('f-nombre').focus();
+  }
+  $('btn-nueva').addEventListener('click', () => abrirForm(null));
+  $('btn-cancelar-act').addEventListener('click', () => { $('form-act').hidden = true; editando = null; });
+  $('form-act').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const p = { tipo: $('f-tipo').value, nombre: $('f-nombre').value, lugar: $('f-lugar').value, fecha: $('f-fecha').value, inicio: $('f-inicio').value,
+                fin: $('f-fin').value, descripcion: $('f-desc').value, grupoModo: $('f-modo').value, grupo: $('f-grupo').value };
+    if (editando) p.id = editando; else p.cupo = $('f-cupo').value;
+    const r = await api(editando ? 'panel_editar' : 'panel_crear', p);
+    if (!r.ok) return aviso(r);
+    aviso(r, (editando ? editando + ' actualizada.' : r.actividad.id + ' creada y oculta: muéstrala desde Operación.') +
+             (r.cruces && r.cruces.length ? ' Se cruza con ' + r.cruces.join(', ') + ' (solo importa si combinas el mismo día).' : ''));
+    $('form-act').hidden = true; editando = null; refrescar();
+  });
+
+  // ── Listas por actividad (nivel 1) ──
+  let ultimaLista = null;
+  async function cargarLista() {
+    if (!datos) return;
+    const r = await api('panel_lista', { id: $('l-act').value || null, etapa: $('l-etapa').value || null, q: $('l-q').value.trim() });
+    const res = $('l-res'); res.textContent = '';
+    if (!r.ok) return mensaje($('l-aviso'), r);
+    ultimaLista = r;
+    numero(res, r.total, 'inscritos'); numero(res, r.total - r.pendientes, 'en el grupo'); numero(res, r.pendientes, 'por agregar');
+    if ($('l-q').value.trim() && !r.total) mensaje($('l-aviso'), { tipo: 'no_inscrito', mensaje: 'Nadie con ese número, documento o apellido en esta lista: rechaza la solicitud.' });
+    const tb = $('l-tabla'); tb.textContent = '';
+    if (!r.filas.length) { const tr = el('tr'); tr.appendChild(el('td', { colspan: 9, class: 'tenue' }, 'Sin inscritos.')); tb.appendChild(tr); }
+    r.filas.forEach((f, k) => {
+      const tr = el('tr', { 'data-codigo': f.codigo });
+      [String(k + 1), f.actividad, f.apellidos, f.nombres, f.doc, f.correo, f.celular, String(f.etapa)].forEach((v) => tr.appendChild(el('td', {}, v)));
+      const g = el('td');
+      g.appendChild(boton(f.enGrupo ? '✔ en el grupo' : 'Marcar agregado', { 'data-grupo': f.codigo, 'data-en-grupo': String(f.enGrupo) }, async () => {
+        const x = await api('panel_grupo_marcar', { id: f.actividad, codigos: [f.codigo], agregado: !f.enGrupo });
+        aviso(x, x.ok ? 'Guardado en la base: ' + (x.agregado ? 'en el grupo' : 'por agregar') + '.' : null);
+        cargarLista();      // se vuelve a leer de la base: lo que ves es lo que quedó guardado
+      }));
+      tr.appendChild(g); tb.appendChild(tr);
+    });
+  }
+  ['l-act', 'l-etapa'].forEach((id) => $(id).addEventListener('change', () => { mensaje($('l-aviso'), null); cargarLista(); }));
+  $('l-buscar').addEventListener('click', () => { mensaje($('l-aviso'), null); cargarLista(); });
+  $('l-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { mensaje($('l-aviso'), null); cargarLista(); } });
+  $('l-todos').addEventListener('click', async () => {
+    const id = $('l-act').value;
+    if (!id) return aviso({ tipo: 'actividad_invalida', mensaje: 'Elige una actividad para marcar a todos.' });
+    const pend = (ultimaLista ? ultimaLista.filas : []).filter((f) => !f.enGrupo).map((f) => f.codigo);
+    if (!pend.length) return aviso({ ok: true, tipo: 'panel' }, 'No hay nadie por agregar.');
+    if (!(await preguntar({ titulo: 'Marcar ' + pend.length + ' como agregados', texto: 'Confirma que ya están en el grupo de ' + id + '.', ok: 'Marcar' }))) return;
+    const x = await api('panel_grupo_marcar', { id, codigos: pend, agregado: true }); aviso(x, x.ok ? x.marcados + ' marcados en el grupo.' : null); cargarLista();
+  });
+  const pendientes = () => (ultimaLista ? ultimaLista.filas : []).filter((f) => !f.enGrupo);
+  $('l-copiar').addEventListener('click', async () => {
+    const t = pendientes().map((f) => f.apellidos + ', ' + f.nombres + '\t' + f.celular).join('\n');
+    try { await navigator.clipboard.writeText(t); aviso({ ok: true, tipo: 'panel' }, pendientes().length + ' números por agregar copiados.'); }
+    catch (e) { aviso({ tipo: 'error', mensaje: 'El navegador no permitió copiar.' }); }
+  });
+  $('l-vcf').addEventListener('click', () => {
+    const v = pendientes().map((f) => 'BEGIN:VCARD\r\nVERSION:3.0\r\nFN:' + (f.nombres + ' ' + f.apellidos + ' · ' + f.actividad).replace(/[\r\n;,]/g, ' ') + '\r\nTEL;TYPE=CELL:' + f.celular + '\r\nEND:VCARD').join('\r\n');
+    descargar('contactos-' + ($('l-act').value || 'todas') + '.vcf', v, 'text/vcard');
+  });
+  async function csvLista(todas) {
+    const r = await api('panel_exportar', { id: todas ? null : $('l-act').value || null, etapa: todas ? null : $('l-etapa').value || null });
+    if (!r.ok) return aviso(r);
+    csv('inscritos-' + (todas ? 'todas' : ($('l-act').value || 'todas') + ($('l-etapa').value ? '-etapa' + $('l-etapa').value : '')) + '-' + fechaArchivo() + '.csv', r);
+    aviso({ ok: true, tipo: 'panel' }, r.filas.length + ' filas exportadas (queda en la bitácora).');
+  }
+  $('l-csv').addEventListener('click', () => csvLista(false));
+  $('l-csv-todas').addEventListener('click', () => csvLista(true));
+
+  // ── Sistema (nivel 3) ──
+  async function cargarEquipo() {
+    const r = await api('panel_equipo'); const tb = $('tabla-equipo'); tb.textContent = '';
+    if (!r.ok) return aviso(r);
+    r.cuentas.forEach((u) => {
+      const tr = el('tr'); tr.appendChild(el('td', {}, u.correo));
+      const prop = u.rol === 'propietario';
+      const nom = el('input', { value: u.nombre, 'aria-label': 'Nombre de ' + u.correo, disabled: prop }); const tn = el('td'); tn.appendChild(nom); tr.appendChild(tn);
+      const ts = el('td');
+      let s = null;
+      if (prop) ts.appendChild(el('b', {}, 'propietario'));
+      else { s = el('select', { 'aria-label': 'Rol de ' + u.correo }); [['', 'sin rol'], ['operador', 'operador'], ['admin', 'admin']].forEach(([v, t]) => s.appendChild(el('option', { value: v, selected: (u.rol || '') === v }, t))); ts.appendChild(s); }
+      tr.appendChild(ts);
+      const tc = el('td'); tc.appendChild(el('span', { class: 'estado', 'data-v': u.totp ? 'ok' : 'aviso' }, u.totp ? 'registrado' : 'pendiente')); tr.appendChild(tc);
+      const ta = el('td'); ta.appendChild(el('span', { class: 'estado', 'data-v': u.activo ? 'ok' : 'mal' }, u.activo ? 'activa' : 'desactivada')); tr.appendChild(ta);
+      const acc = el('td');
+      if (!prop) {
+        acc.appendChild(boton('Guardar', {}, async () => { const x = await api('panel_equipo_rol', { usuario: u.usuario, rol: s.value || null, nombre: nom.value }); aviso(x, x.ok ? u.correo + (x.rol ? ' ahora es ' + x.rol + '.' : ' quedó sin rol.') : null); if (x.ok) cargarEquipo(); }));
+        acc.appendChild(boton(u.activo ? 'Desactivar' : 'Activar', {}, async () => { const x = await api('panel_equipo_activo', { usuario: u.usuario, activo: !u.activo }); aviso(x, x.ok ? u.correo + (x.activo ? ' activada.' : ' desactivada.') : null); if (x.ok) cargarEquipo(); }));
+      } else acc.appendChild(el('small', { class: 'tenue' }, 'solo por SQL'));
+      tr.appendChild(acc); tb.appendChild(tr);
+    });
+  }
+  function pintarRespaldo() {
+    const u = datos && datos.ultimoRespaldo;
+    $('ultimo-respaldo').textContent = u ? 'Último respaldo: ' + u.fecha + ' · ' + u.quien + ' · ' + Math.round(u.bytes / 1024) + ' KB' : 'Aún no se descargó ningún respaldo.';
+  }
+  $('btn-respaldo').addEventListener('click', async () => {
+    const r = await api('panel_respaldo');
+    if (!r.ok) return aviso(r);
+    descargar('respaldo-ciic-' + fechaArchivo() + '.json', JSON.stringify(r, null, 1), 'application/json');
+    aviso({ ok: true, tipo: 'panel' }, 'Respaldo descargado. Huella ' + String(r.huella).slice(0, 12) + '…');
+    await refrescar(); pintarRespaldo();
+  });
+  $('btn-produccion').addEventListener('click', async () => {
+    if ($('llave-prod').value.trim() !== 'PRODUCCION') return aviso({ tipo: 'valor_invalido', mensaje: 'Para confirmar, escribe PRODUCCION.' });
+    if (!(await preguntar({ titulo: 'Pasar a producción', texto: 'Se borran las inscripciones de prueba, la bitácora y los intentos. El padrón y las actividades quedan. ¿Descargaste un respaldo?', ok: 'Pasar a producción' }))) return;
+    const r = await api('panel_preparar_produccion', { llave: 'PRODUCCION' });
+    aviso(r, r.ok ? 'Modo PRODUCCION. ' + r.eliminadas + ' inscripciones de prueba eliminadas.' : null);
+    if (r.ok) { $('llave-prod').value = ''; refrescar(); }
+  });
+  // ── Importaciones (R-42, R-45): el CSV se lee en el navegador; la base normaliza, valida y responde un informe ──
+  function filasCSV(texto) {
+    texto = texto.replace(/^\ufeff/, '').replace(/\r\n?/g, '\n');
+    const primera = texto.split('\n')[0] || '';
+    const sep = [';', '\t', ','].map((x) => [x, primera.split(x).length]).sort((a, b) => b[1] - a[1])[0][0];
+    const filas = []; let fila = [], celda = '', comillas = false;
+    for (let i = 0; i < texto.length; i++) {
+      const ch = texto[i];
+      if (comillas) { if (ch === '"' && texto[i + 1] === '"') { celda += '"'; i++; } else if (ch === '"') comillas = false; else celda += ch; }
+      else if (ch === '"') comillas = true;
+      else if (ch === sep) { fila.push(celda.trim()); celda = ''; }
+      else if (ch === '\n') { fila.push(celda.trim()); filas.push(fila); fila = []; celda = ''; }
+      else celda += ch;
+    }
+    if (celda.trim() || fila.length) { fila.push(celda.trim()); filas.push(fila); }
+    return filas.filter((f) => f.some((c) => c !== ''));
+  }
+  const sinTilde = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  function leerPadron(texto) {
+    const filas = filasCSV(texto); let iDoc = 0, iEt = 1;
+    const enc = (filas[0] || []).map(sinTilde);
+    if (enc.length && !enc.some((c) => /\d{5,}/.test(c))) {      // tiene encabezado
+      const d = enc.findIndex((c) => /documento|dni|doc|pasaporte|carnet/.test(c)), e = enc.findIndex((c) => /etapa/.test(c));
+      if (d >= 0) iDoc = d; if (e >= 0) iEt = e;
+      filas.shift();
+    }
+    return filas.map((f) => ({ documento: f[iDoc] || '', etapa: f[iEt] || '' }));
+  }
+  const CAMPOS_ACT = { id: /^id$/, tipo: /^tipo/, nombre: /^nombre/, lugar: /^lugar/, fecha: /^fecha/, inicio: /^inicio|^hora inicio/, fin: /^fin|^hora fin/,
+                       cupo: /^cupo/, descripcion: /^descrip|^informacion/, entrega: /^entrega|^modo/, enlace: /^enlace|^grupo/, visible: /^visible|^publicada/ };
+  function leerActividades(texto) {
+    const filas = filasCSV(texto);
+    const enc = (filas.shift() || []).map(sinTilde);
+    const idx = Object.fromEntries(Object.entries(CAMPOS_ACT).map(([k, re]) => [k, enc.findIndex((c) => re.test(c))]));
+    if (idx.tipo < 0 || idx.nombre < 0 || idx.fecha < 0) return null;
+    return filas.map((f) => Object.fromEntries(Object.entries(idx).filter(([, i]) => i >= 0).map(([k, i]) => [k, f[i] || ''])));
+  }
+  let filasPadron = [], filasAct = [];
+  $('archivo-padron').addEventListener('change', async () => {
+    const f = $('archivo-padron').files[0]; const v = $('vista-padron'); v.textContent = ''; $('informe-padron').textContent = '';
+    if (!f) return;
+    filasPadron = leerPadron(await f.text());
+    v.appendChild(el('p', {}, filasPadron.length + ' filas leídas. Primeras 5:'));
+    filasPadron.slice(0, 5).forEach((x) => v.appendChild(el('div', {}, x.documento + ' · etapa ' + x.etapa)));
+    $('btn-importar').disabled = !filasPadron.length || filasPadron.length > 10000;
+    if (filasPadron.length > 10000) v.appendChild(el('p', {}, 'Más de 10 000 filas: divide el archivo.'));
+  });
+  $('btn-importar').addEventListener('click', async () => {
+    $('btn-importar').disabled = true;
+    // En lotes de 2000 con progreso: cada lote es una operación corta. Reimportar el mismo archivo es seguro (lo ya agregado queda como "ya existía").
+    const LOTE = 2000, total = filasPadron.length, caja = $('informe-padron');
+    const r = { agregados: 0, existentes: 0, conflictos: [], invalidos: [], totalConflictos: 0, totalInvalidos: 0 };
+    for (let k = 0; k < total; k += LOTE) {
+      mensaje(caja, { tipo: 'info', mensaje: 'Importando ' + Math.min(k + LOTE, total).toLocaleString('es-PE') + ' de ' + total.toLocaleString('es-PE') + '…' });
+      const x = await api('panel_padron_importar', { filas: filasPadron.slice(k, k + LOTE), lote: (k / LOTE + 1) + '/' + Math.ceil(total / LOTE) });
+      if (!x.ok) {
+        $('btn-importar').disabled = false;
+        return mensaje(caja, { tipo: x.tipo, mensaje: (k ? 'Se importaron las primeras ' + k.toLocaleString('es-PE') + ' filas; el resto no. ' : '') + x.mensaje +
+          ' Puedes volver a importar el mismo archivo: lo ya agregado quedará como "ya existía".' });
+      }
+      r.agregados += x.agregados; r.existentes += x.existentes; r.totalConflictos += x.totalConflictos; r.totalInvalidos += x.totalInvalidos;
+      r.conflictos = r.conflictos.concat(x.conflictos);
+      r.invalidos = r.invalidos.concat(x.invalidos.map((i) => Object.assign({}, i, { fila: i.fila + k })));
+    }
+    caja.textContent = '';
+    mensaje(caja, { ok: true, tipo: 'panel', mensaje: r.agregados + ' agregados · ' + r.existentes + ' ya existían · ' + r.totalConflictos + ' conflictos de etapa · ' + r.totalInvalidos + ' inválidos.' });
+    r.conflictos.slice(0, 20).forEach((x) => caja.appendChild(el('div', { class: 'tenue' }, 'Conflicto: ' + x.documento + ' está en la Etapa ' + x.etapaActual + ' (el archivo dice ' + x.etapaPedida + '); no se cambió.')));
+    r.invalidos.slice(0, 20).forEach((x) => caja.appendChild(el('div', { class: 'tenue' }, 'Fila ' + x.fila + ' inválida: "' + x.documento + '" · etapa "' + x.etapa + '".')));
+    filasPadron = []; $('archivo-padron').value = ''; refrescar();
+  });
+  $('archivo-actividades').addEventListener('change', async () => {
+    const f = $('archivo-actividades').files[0]; const v = $('vista-actividades'); v.textContent = ''; $('informe-actividades').textContent = '';
+    if (!f) return;
+    filasAct = leerActividades(await f.text());
+    if (!filasAct) { filasAct = []; $('btn-importar-act').disabled = true; return v.appendChild(el('p', {}, 'Falta el encabezado: al menos tipo, nombre y fecha.')); }
+    v.appendChild(el('p', {}, filasAct.length + ' actividades leídas. Primeras 5:'));
+    filasAct.slice(0, 5).forEach((x) => v.appendChild(el('div', {}, (x.id || '(nuevo id)') + ' · ' + x.tipo + ' · ' + x.nombre + ' · ' + x.fecha + ' ' + x.inicio + '–' + x.fin + ' · cupo ' + x.cupo)));
+    $('btn-importar-act').disabled = !filasAct.length || filasAct.length > 500;
+  });
+  $('btn-importar-act').addEventListener('click', async () => {
+    $('btn-importar-act').disabled = true;
+    const r = await api('panel_actividades_importar', { filas: filasAct });
+    const caja = $('informe-actividades'); caja.textContent = '';
+    if (!r.ok) { $('btn-importar-act').disabled = false; return mensaje(caja, r); }
+    mensaje(caja, { ok: true, tipo: 'panel', mensaje: r.agregadas + ' agregadas · ' + r.existentes.length + ' ya existían (sin cambios) · ' + r.invalidas.length + ' inválidas.' });
+    r.invalidas.slice(0, 30).forEach((x) => caja.appendChild(el('div', { class: 'tenue' }, 'Fila ' + x.fila + ': ' + x.motivo)));
+    filasAct = []; $('archivo-actividades').value = ''; refrescar();
+  });
+  $('btn-vaciar').addEventListener('click', async () => {
+    if ($('llave-vaciar').value.trim() !== 'VACIAR') return aviso({ tipo: 'valor_invalido', mensaje: 'Para confirmar, escribe VACIAR.' });
+    if (!(await preguntar({ titulo: 'Vaciar datos de prueba', texto: 'Se borran el padrón, las actividades, las inscripciones y la bitácora de prueba. La configuración y el equipo quedan. ¿Descargaste un respaldo?', ok: 'Vaciar' }))) return;
+    const r = await api('panel_vaciar_prueba', { llave: 'VACIAR' });
+    aviso(r, r.ok ? 'Base vacía: ' + r.eliminados.padron + ' del padrón, ' + r.eliminados.actividades + ' actividades y ' + r.eliminados.inscripciones + ' inscripciones eliminadas.' : null);
+    if (r.ok) { $('llave-vaciar').value = ''; refrescar(); }
+  });
+
+  // ── Modo demo ──
+  function cintaDemo() {
+    const c = $('demo-cinta'); c.hidden = false; c.textContent = '';
+    c.appendChild(el('b', {}, 'MODO DEMO · '));
+    const t = el('span', {}, ''); c.appendChild(t);
+    const cambiar = el('button', { type: 'button' }, 'Cambiar de cuenta'); cambiar.addEventListener('click', () => salir(null)); c.appendChild(cambiar);
+    const r = el('button', { type: 'button' }, '↺ Reiniciar datos'); r.addEventListener('click', async () => { window.CIIC_DEMO.reiniciar(); if (datos) { await refrescar(); aviso({ ok: true, tipo: 'panel' }, 'Datos de prueba reiniciados.'); } }); c.appendChild(r);
+    const sel = el('select', { 'aria-label': 'Ver estado' });
+    [['', 'Ver estado…'], ['alerta', 'Alerta de saturación'], ['cuenta', 'Cuenta regresiva'], ['cerrado', 'Cerrado'], ['integridad', 'Integridad rota'], ['advertencia', 'Ventana de advertencia'],
+     ['error', 'Aviso de error'], ['sin_conexion', 'Sin conexión'], ['login', 'Inicio de sesión real'], ['codigo', 'Código de verificación'], ['reset', 'Restablecer']]
+      .forEach(([v, t]) => sel.appendChild(el('option', { value: v }, t)));
+    sel.addEventListener('change', () => { simular(sel.value); sel.value = ''; });
+    c.appendChild(sel);
+    const e = el('button', { type: 'button' }, 'Provocar un error'); e.addEventListener('click', async () => { const x = await api('prueba_error'); aviso(x); if (datos) cargarIncidencias(); }); c.appendChild(e);
+    c.appendChild(el('a', { href: 'index.html', target: '_blank' }, 'Abrir la página ↗'));
+    const caja = $('cuentas-demo'); caja.textContent = '';
+    window.CIIC_DEMO.cuentas().forEach((u) => caja.appendChild(boton(u.nombre + ' · ' + (u.rol || 'sin rol') + (u.activo ? '' : ' · desactivada'), { class: 'boton chico' }, () => { demoSesion = u.id; entrar(); })));
+  }
+  // Fuerza estados visuales para diseñarlos (solo modo demo). Se deshacen con "Restablecer" o en el siguiente refresco
+  let simulando = false;
+  async function simular(cual) {
+    if (cual === 'login' || cual === 'codigo') {
+      clearTimeout(tRefresco); mostrar('login'); $('paso-demo').hidden = true; $('paso-prueba').hidden = false;
+      pasoLogin(cual === 'login' ? 'paso-clave' : 'paso-codigo');
+      if (cual === 'codigo') { $('alta-totp').hidden = false; $('t-codigo').textContent = 'Registra tu app de verificación'; $('secreto').textContent = 'JBSWY3DPEHPK3PXP'; $('qr').alt = 'Aquí va el código QR'; }
+      $('sesion').textContent = 'Inicia sesión para continuar';
+      return;
+    }
+    if (!datos) { mostrar('login'); $('paso-demo').hidden = false; $('paso-clave').hidden = true; $('paso-prueba').hidden = true; return; }
+    simulando = cual !== 'reset'; clearTimeout(tRefresco);
+    if (cual === 'reset') { mostrar('app'); await refrescar(); programar(); return; }
+    await refrescar();      // cada estado parte de los datos reales de la demo, sin acumular el anterior
+    if (cual === 'alerta') { datos.trafico = Object.assign({}, datos.trafico, { alerta: true, ventana10s: 2480, pico10s: 3120 }); pintarFranja(); pintarTotales(); }
+    if (cual === 'cuenta') { datos.config.cierraEn = 120; finCuenta = Date.now() + 120000; pintarFranja(); pintarEstado(); }
+    if (cual === 'cerrado') { datos.config.abierto = false; datos.config.cierraEn = null; finCuenta = null; pintar(); }
+    if (cual === 'integridad') { datos.integridad = { ok: false, descuadres: ['VIS03', 'TAL07'] }; pintarTotales(); }
+    if (cual === 'advertencia') preguntar({ titulo: 'Bajar el cupo de VIS03', texto: '"Presa de derivación Huachipa" tiene 15 inscritos. No se puede bajar a 10 sin anular a 5 personas. Puedes dejarla en 15: queda llena y no entra nadie más.', ok: 'Dejarla en 15 y cerrarla', llave: 'VIS03' });
+    if (cual === 'error') aviso({ tipo: 'error_servidor', mensaje: 'Ocurrió un error en el sistema. Intenta de nuevo en unos segundos.', incidencia: 'INC-0007' });
+    if (cual === 'sin_conexion') aviso({ tipo: 'sin_conexion', mensaje: 'No hay conexión con el sistema.' });
+  }
+  const cargarScript = (src) => new Promise((ok, mal) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = mal; if (/supabase/.test(src)) { s.integrity = CFG.SUPABASE_JS_SRI || ''; s.crossOrigin = 'anonymous'; if (!s.integrity) s.removeAttribute('integrity'); } document.head.appendChild(s); });
+
+  // ── Inicio ──
+  (async () => {
+    if (CFG.NOMBRE_EVENTO) $('evento').textContent = 'Panel · ' + CFG.NOMBRE_EVENTO;
+    if (DEMO) {
+      try { if (!window.CIIC_DEMO) { await cargarScript('demo/datos-demo.js'); await cargarScript('demo/demo-api.js'); } } catch (e) { return mensaje($('msg-login'), { tipo: 'config', mensaje: 'No se pudo cargar el modo demo (carpeta demo/).' }); }
+      $('paso-clave').hidden = true; $('paso-prueba').hidden = true; $('paso-demo').hidden = false; cintaDemo();
+      return;
+    }
+    if (!/^https?:\/\//.test(API) || !ANON || /PEGA_AQUI/.test(API + ANON)) return mensaje($('msg-login'), { tipo: 'config', mensaje: 'Falta configurar el sistema: pega API_URL y ANON_KEY en config.js, o usa MODO: "demo".' });
+    try { await cargarScript(CFG.SUPABASE_JS || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'); } catch (e) { return; }   // sin supabase-js queda la clave de prueba
+    sb = window.supabase.createClient(API, ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
+    const { data } = await sb.auth.getSession();
+    if (flujoClave && data.session) return pasoLogin('paso-nueva');
+    if (data.session) entrar();
+  })();
+})();
+</script>
+</body>
+</html>

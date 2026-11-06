@@ -1,0 +1,6 @@
+# Versiones exactas (Sprint 3.1), todas con dos semanas o más de publicadas. El tester corre en GitHub con el secreto ADMIN_KEY.
+requests==2.34.2
+playwright==1.64.0
+psycopg2-binary==2.9.13
+# Solo para supabase/excel_a_sql.py (cargar desde Excel); el tester no la usa:
+openpyxl==3.1.5
