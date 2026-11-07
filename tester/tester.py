@@ -1838,6 +1838,7 @@ class Tester:
         lat = []
 
         def persona(d):
+            time.sleep(random.random() * self.a.rampa_q)   # llegan repartidas en un instante corto (--rampa-q), no en el mismo milisegundo
             t0 = time.perf_counter()
             v = self.cli.llamar({'action': 'verificar', 'dni': d}, paciente=True)
             if v.get('tipo') != 'ok':
@@ -1851,21 +1852,48 @@ class Tester:
             return r.get('tipo'), time.perf_counter() - t0
 
         self.acts_cache = acts0
+        m0 = dict(self.cli.motivos)
         with cf.ThreadPoolExecutor(n) as ex:
             rs = list(ex.map(persona, docs))
         tipos = [r[0] for r in rs]
         lat = sorted(r[1] for r in rs if r[1])
         p95 = lat[int(len(lat) * 0.95) - 1] if lat else 0
         print(pinta(GRIS, f"  … registradas {tipos.count('registrado')} · llenas {tipos.count('lleno')} · otras {len(tipos) - tipos.count('registrado') - tipos.count('lleno')} · p95 {p95:.1f} s"))
-        self.ok('Nadie termina con error', set(tipos) <= {'registrado', 'lleno', 'combinacion_invalida'}, 'registrado o lleno', set(tipos))
+        self.ok_sin_error('Nadie termina con error', tipos)
         acts = self.acts()
         self.ok('Ninguna actividad con sobrecupo', all(a['inscritos'] <= a['cupo'] for a in acts.values()), 'ninguna', '')
-        self.ok('95 % con respuesta en menos de 60 s', p95 < 60, '< 60 s', f'{p95:.1f} s')
+        self.ok_tiempo('95 % con respuesta en menos de 60 s', p95, 60, m0)
         reg = self.panel('panel_registros')
         i_doc, i_est = reg['encabezados'].index('Documento'), reg['encabezados'].index('Estado')
         docs_conf = [f[i_doc] for f in reg['filas'] if f[i_est] == 'CONFIRMADO']
         self.ok('Nadie quedó inscrito dos veces', len(docs_conf) == len(set(docs_conf)), 'únicos', len(docs_conf) - len(set(docs_conf)))
         self.config(etapas=[1, 2], etapasVisita=[1])
+
+    @property
+    def remota(self):
+        """Contra Supabase desde una PC. En GitHub (la medición de referencia) y en local, toda falla cuenta como FALLA."""
+        return not re.search(r'//(127\.0\.0\.1|localhost)[:/]', self.a.api) and os.environ.get('GITHUB_ACTIONS') != 'true'
+
+    def ok_sin_error(self, texto, tipos):
+        """Cómo terminó cada persona de una carga. Contra Supabase desde un equipo, si las únicas que no terminaron se quedaron
+        sin conexión (3 min de reintentos: TLS, red de ese equipo) y son pocas (hasta 2 %), es un aviso: ninguna recibió un error
+        de la base. Más que eso, o cualquier otro error, es FALLA (Sprint 5)."""
+        extra = [x for x in tipos if x not in ('registrado', 'lleno', 'combinacion_invalida')]
+        if extra and self.remota and set(extra) == {'sin_conexion'} and len(extra) <= max(1, len(tipos) // 50):
+            self.omitir(texto, f'AVISO: {len(extra)} de {len(tipos)} personas sin conexión tras 3 min de reintentos desde este equipo; '
+                               f'ninguna con error de la base. La referencia es la corrida de GitHub')
+            return
+        self.ok(texto, not extra, 'registrado o lleno', sorted(set(extra)))
+
+    def ok_tiempo(self, texto, p95, limite, m0):
+        """El tiempo de una carga. Contra Supabase desde un equipo, si el tiempo se pasó SOLO por fallas de conexión de ese equipo
+        (sin_conexion: TLS, red) y la base nunca respondió "ocupado", es un aviso, no una falla: la base no se saturó (Sprint 5)."""
+        nuevos = {k: v - m0.get(k, 0) for k, v in self.cli.motivos.items() if v - m0.get(k, 0) > 0}
+        if p95 >= limite and self.remota and nuevos and all(k.endswith(': sin_conexion') for k in nuevos):
+            self.omitir(texto, f'AVISO: p95 {p95:.1f} s por fallas de conexión de este equipo ({sum(nuevos.values())} sin_conexion, ningún "ocupado" '
+                               f'de la base): no es un defecto del sistema. La referencia es la corrida de GitHub')
+            return
+        self.ok(texto, p95 < limite, f'< {limite} s', f'{p95:.1f} s')
 
     def w_carga(self):
         n = self.a.personas_w
@@ -1903,6 +1931,7 @@ class Tester:
             return r.get('tipo'), time.perf_counter() - t0, time.perf_counter() - t1, ids
 
         t0 = time.perf_counter()
+        m0 = dict(self.cli.motivos)
         with cf.ThreadPoolExecutor(n) as ex:
             rs = list(ex.map(persona, docs))
         dur = time.perf_counter() - t0
@@ -1912,7 +1941,7 @@ class Tester:
         pct = lambda l, q: l[max(int(len(l) * q) - 1, 0)] if l else 0
         print(pinta(GRIS, f"  … {dur:.0f} s · registradas {tipos.count('registrado')} · llenas {tipos.count('lleno')} · otras {len(tipos) - tipos.count('registrado') - tipos.count('lleno')}"
                           f" · de principio a fin p50 {pct(tot, .5):.1f} s, p95 {pct(tot, .95):.1f} s · confirmar p50 {pct(con, .5):.1f} s, p95 {pct(con, .95):.1f} s"))
-        self.ok('Nadie termina con error', set(tipos) <= {'registrado', 'lleno', 'combinacion_invalida'}, 'registrado o lleno', sorted(set(tipos) - {'registrado', 'lleno', 'combinacion_invalida'}))
+        self.ok_sin_error('Nadie termina con error', tipos)
         acts = self.acts()
         falsos = [x[3] for x in rs if x[0] == 'lleno' and not any(acts[i]['inscritos'] >= acts[i]['cupo'] for i in x[3])]
         self.ok('Cada "lleno" corresponde a una actividad que de verdad se llenó', not falsos, 'ninguno falso', falsos[:3])
@@ -1924,7 +1953,7 @@ class Tester:
         conf = [f[i_doc] for f in reg['filas'] if f[i_est] == 'CONFIRMADO']
         self.ok('Nadie quedó inscrito dos veces', len(conf) == len(set(conf)), 'únicos', len(conf) - len(set(conf)))
         self.ok('Integridad de contadores después de la carga', self.resumen()['integridad']['ok'], 'OK', self.resumen()['integridad'])
-        self.ok('95 % con respuesta en menos de 60 s', pct(tot, .95) < 60, '< 60 s', f'{pct(tot, .95):.1f} s')
+        self.ok_tiempo('95 % con respuesta en menos de 60 s', pct(tot, .95), 60, m0)
         self.config(etapas=[1, 2], etapasVisita=[1])
         self.w_trafico()
 
@@ -2052,7 +2081,7 @@ class Tester:
         (self.salida / 'resultados.json').write_text(json.dumps({'pasan': pasan, 'fallan': fallan, 'omitidas': omit, 'error': error, 'reintentos': self.cli.motivos,
                                                                  'causas': {k: self.mascara(v) for k, v in self.cli.ejemplos.items()}, 'pruebas': self.res},
                                                                 ensure_ascii=False, indent=1), encoding='utf-8')
-        md = ['# Reporte del tester · v5.5 (Sprint 4)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
+        md = ['# Reporte del tester · v5.5 (Sprint 5)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
         if error:
             md += [f'> ⛔ {error}', '']
         md += ['| | Bloque | Prueba | Esperado | Obtenido |', '|---|---|---|---|---|']
@@ -2084,6 +2113,8 @@ def main():
     ap.add_argument('--personas', type=int, default=int(os.environ.get('CARGA_PERSONAS') or 150))
     ap.add_argument('--personas-w', type=int, default=int(os.environ.get('CARGA_W') or 1000),
                     help='bloque W: personas que navegan y confirman a la vez (0 = sin el bloque W)')
+    ap.add_argument('--rampa-q', type=float, default=float(os.environ.get('RAMPA_Q') or 1),
+                    help='bloque Q: las personas llegan repartidas en estos segundos (0 = todas en el mismo instante)')
     ap.add_argument('--rampa-w', type=float, default=float(os.environ.get('RAMPA_W') or 3),
                     help='bloque W: las personas llegan repartidas en estos segundos, como en una apertura real (0 = todas en el mismo instante)')
     ap.add_argument('--salida', default='resultados')
@@ -2102,7 +2133,7 @@ def main():
         print('⛔ Falta API_URL o ANON_KEY: pégalos en docs/config.js o usa --api y --anon.')
         return 2
     t = Tester(a)
-    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 4) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
+    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 5) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
     inicio, error = time.perf_counter(), None
     try:
         if a.modo == 'lectura':

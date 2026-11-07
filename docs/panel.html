@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="t-panel">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Panel de organización</title>
 <link rel="stylesheet" href="base.css">
+<script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"oscuro":"claro";document.documentElement.setAttribute("data-tema",t)})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,300..800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="tema/panel.css">
 <script src="config.js"></script>
 </head>
 <body>
@@ -16,9 +21,17 @@
      data-nivel="2" o "3": el panel lo oculta a roles menores (la base igual lo rechaza).
      ═══════════════════════════════════════════════════════════════════════ -->
 <div class="demo-cinta" id="demo-cinta" data-demo hidden></div>
+<!-- Tema CIDEIC · portada del acceso (decorativa: se puede quitar sin romper nada) -->
+<script>document.body.classList.add('en-login');</script>
+<div class="portada" aria-hidden="true">
+  <div class="logo"><div class="fila-logo v-oscuro"><img class="l-marca" alt="" src="tema/img/logo-marca-oscuro.webp"><img class="l-linea" alt="" src="tema/img/logo-linea-oscuro.webp"><img class="l-texto" alt="" src="tema/img/logo-texto-oscuro.webp"></div><div class="fila-logo v-claro"><img class="l-marca" alt="" src="tema/img/logo-marca-claro.webp"><img class="l-linea" alt="" src="tema/img/logo-linea-claro.webp"><img class="l-texto" alt="" src="tema/img/logo-texto-claro.webp"></div></div>
+  <i class="cota"></i>
+</div>
 <header class="cabecera">
   <div class="contenido ancho cabecera-fila">
+    <img class="marca v-oscuro" src="tema/img/cabecera-oscuro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="129"><img class="marca v-claro" src="tema/img/cabecera-claro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="129">
     <div><h1 id="evento">Panel de organización</h1><p id="sesion">Inicia sesión para continuar</p></div>
+    <button type="button" class="tema-btn" role="switch" aria-checked="false" aria-label="Modo oscuro" title="Cambiar entre modo claro y oscuro"><span class="tema-pista" aria-hidden="true"><span class="tema-perilla"></span><svg class="i-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></span></button>
     <button class="boton secundario chico" id="btn-salir" type="button" hidden>Salir</button>
   </div>
 </header>
@@ -1030,5 +1043,6 @@
   })();
 })();
 </script>
+<script src="tema/panel.js"></script>
 </body>
 </html>

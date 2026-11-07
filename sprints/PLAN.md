@@ -90,14 +90,16 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 
 ---
 
-## Sprint 5 · Diseño de autor y ensayo · 09/11 y 10/11
+## Sprint 5 · Diseño de autor y ensayo · 09/11 y 10/11 · entregado el 06/11
 
 | # | Tarea |
 |---|---|
-| 5.1 | Tu diseño sobre las páginas, respetando `docs/LEEME-DISENO.md` |
-| 5.2 | Tester de navegador en verde con tu diseño |
-| 5.3 | Equipo invitado con sus roles |
-| 5.4 | Ensayo con diez personas: inscripción, cierre en medio, reapertura, cambio por soporte, alta de último momento, importación, listas y CSV |
+| 5.1 | Tu diseño sobre las páginas: Tema CIDEIC (participante v3.1, panel v1.2) en `docs/tema/`, sin cambiar ids ni `data-*` ✅ |
+| 5.2 | Tester de navegador en verde con tu diseño ✅ (en diseño) |
+| 5.3 | Equipo invitado con sus roles: 2 admin y 4 operadores (`sprints/sprint-5/GUIA.md`, parte B) |
+| 5.4 | Ensayo con diez personas (GUIA, parte C): inscripción, lleno, repetido, sin conexión, etapa no habilitada, fuera del padrón, cierre con aviso, anular, alta y cambio por soporte, listas y CSV, respaldo; al final, vaciar e importar (ensayo de §19.7) |
+| 5.5 | Aviso de privacidad final, nombre del congreso y contacto en `config.js` (`sprints/sprint-5/configurar.py`) |
+| 5.6 | Del reporte del 4.1: rampa en Q. Desde una PC (no en GitHub ni en local), es aviso y no falla: el tiempo pasado solo por fallas de conexión del equipo, y hasta un 2 % de personas sin conexión tras 3 min de reintentos, sin ningún error de la base |
 
 ## Apertura
 

@@ -6,6 +6,7 @@ ni Supabase, y sirven para diseñar. Vuelve a correrlo después de cambiar docs/
 
     python local/armar_demos.py   →   demo/demo-participante.html · demo/demo-panel.html
 """
+import base64
 import re
 from pathlib import Path
 
@@ -24,12 +25,25 @@ datos = (docs / 'demo/datos-demo.js').read_text(encoding='utf-8')
 api = (docs / 'demo/demo-api.js').read_text(encoding='utf-8')
 cabecera = ('<!-- DEMO AUTÓNOMA · generada por local/armar_demos.py desde docs/%s. No editar aquí: edita docs/ y vuelve a armar. '
             'Funciona con doble clic; comparte datos con la otra demo si están en la misma carpeta. -->\n')
+def tema_en_linea(h):
+    """El tema (docs/tema/) entra en la demo: su CSS y su JS en línea, y sus imágenes como data:, para que siga siendo un solo archivo."""
+    img = lambda ruta: 'data:image/webp;base64,' + base64.b64encode((docs / ruta).read_bytes()).decode()
+    def css(m):
+        txt = (docs / m.group(1)).read_text(encoding='utf-8')
+        txt = re.sub(r'url\("img/([\w.-]+\.webp)"\)', lambda u: 'url("' + img('tema/img/' + u.group(1)) + '")', txt)
+        return '<style>\n' + txt + '</style>'
+    h = re.sub(r'<link rel="stylesheet" href="(tema/[\w.-]+\.css)">', css, h)
+    h = re.sub(r'<script src="(tema/[\w.-]+\.js)"></script>', lambda m: '<script>\n' + (docs / m.group(1)).read_text(encoding='utf-8') + '</script>', h)
+    return re.sub(r'src="(tema/img/[\w.-]+\.webp)"', lambda m: 'src="' + img(m.group(1)) + '"', h)
+
+
 for origen, destino, otra in [('index.html', 'demo-participante.html', ('panel.html', 'demo-panel.html')), ('panel.html', 'demo-panel.html', ('index.html', 'demo-participante.html'))]:
     h = (docs / origen).read_text(encoding='utf-8')
     h = h.replace('<link rel="stylesheet" href="base.css">', '<style>\n' + css + '\n</style>', 1)
+    h = tema_en_linea(h)
     h = h.replace('<script src="config.js"></script>', '<script>\n' + config + '\n</script>\n<script>\n' + datos + '\n</script>\n<script>\n' + api + '\n</script>', 1)
     h = h.replace("href: '%s'" % otra[0], "href: '%s'" % otra[1])
-    h = h.replace('<html lang="es">\n', '<html lang="es">\n' + cabecera % origen, 1)
+    h = re.sub(r'(<html lang="es"[^>]*>\n)', lambda m: m.group(1) + cabecera % origen, h, count=1)
     (RAIZ / 'demo').mkdir(exist_ok=True)
     escribir(RAIZ / 'demo' / destino, h)
     print(destino, len(h) // 1024, 'KB')

@@ -22,8 +22,9 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 | `local/armar_demos.py` | Arma `demo/*.html` (un archivo por página) a partir de docs/. No se editan a mano |
 | `local/generar_datos.py` | Genera la base ficticia (demo, SQL y CSV). No edites a mano sus salidas: cambia el generador y vuelve a correrlo |
 | `docs/index.html`, `docs/panel.html`, `docs/base.css`, `docs/config.js` | Páginas ya en v5.5 (participante y panel) |
+| `docs/tema/` | Tema CIDEIC (Sprint 5): CSS, JS e imágenes del diseño de autor, aparte del contrato |
 | `docs/demo/demo-api.js` | **Referencia ejecutable del contrato v5.5**: si dudas qué debe responder la base, mira la función correspondiente aquí |
-| `tester/tester.py` | Tester (364 pruebas en local desde el Sprint 4.1; los sprints agregan bloques) |
+| `tester/tester.py` | Tester (364 pruebas en local desde el Sprint 4.1; el Sprint 5 no agrega bloques; los sprints agregan bloques) |
 | `local/` | PostgreSQL local que imita a Supabase + servidor local |
 | `sprints/PLAN.md` | Tareas y criterios de aceptación de cada sprint |
 | `.claude/skills/` | `ciic-desarrollo` (cómo ejecutar un sprint) y `sql-ciic-inscripciones` (reglas para tocar SQL) |

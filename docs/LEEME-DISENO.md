@@ -25,6 +25,20 @@ El modo demo usa `demo/demo-api.js`, que responde exactamente como la base de da
 | Agregar elementos decorativos | El bloque `<script>` de cada página (si lo reescribes, debe respetar las secciones 13 y 14 de la documentación) |
 | Frameworks de CSS | Construir HTML con `innerHTML` a partir de datos: el script usa `textContent` a propósito, para que nadie inyecte código con su nombre o su correo |
 
+## 2.1 · Tema CIDEIC (Sprint 5)
+
+El diseño de autor vive aparte, en `docs/tema/`, y se puede cambiar o quitar sin tocar el contrato:
+
+| Archivo | Qué es |
+|---|---|
+| `tema/participante.css`, `tema/panel.css` | Variables de color (oscuro y claro), escena, tipografía, tarjetas y botones. Se cargan **después** de `base.css` |
+| `tema/participante.js`, `tema/panel.js` | Modo "inicio" (escena o portada), interruptor claro/oscuro (guarda `cideic_tema`), pie con enlace de WhatsApp y, en el panel, tarjetas plegables de Operación (guarda `cideic_plegadas`). Solo cambian clases y `data-tema` |
+| `tema/img/*.webp` | Cielo, paisaje (nítido y difuso), logo de la portada y marca de la cabecera, cada uno en oscuro y claro (unos 220 KB en total) |
+
+En el HTML el tema solo agrega: la clase `t-participante` o `t-panel` en `<html>`, un script corto en `<head>` (fija el modo antes de pintar, para que no destelle), la fuente Saira (Google Fonts), la escena o portada decorativa (`aria-hidden`), la marca de la cabecera y el interruptor. No cambia ningún id ni `data-*`.
+
+Para retocarlo, edita `docs/tema/` y vuelve a armar las demos (`python local/armar_demos.py`): las demos llevan el tema en línea, con las imágenes como `data:`. Para cambiar una imagen, reemplaza el archivo con el mismo nombre.
+
 ## 3 · Ids que usa el script
 
 **index.html (28):** `acepta` `apellidos` `banner` `btn-aviso` `btn-confirmar` `btn-imprimir` `btn-inicio` `btn-verificar` `btn-volver` `celular` `comprobante` `correo` `demo-cinta` `dias` `dlg-aviso` `dlg-aviso-ok` `dlg-aviso-texto` `doc` `evento` `form-datos` `form-doc` `msg-1` `msg-2` `msg-verif` `nombres` `pais` `pie` `t2`

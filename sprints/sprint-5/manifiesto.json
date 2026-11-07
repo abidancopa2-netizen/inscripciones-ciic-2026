@@ -1,0 +1,114 @@
+{
+ "sprint": "sprint-5",
+ "siguiente": "sin migración. En local: configurar.py sin --aplicar, el propietario aprueba el aviso, luego --aplicar; tester con --web. Luego PRUEBA: instalar.py --verificar (ninguna pendiente), commit y push, tester con --dsn y --web contra la página publicada, y el tester de GitHub. Después, GUIA.md partes B y C.",
+ "archivos": {
+  "docs/index.html": {
+   "base": "b4796d085ad1",
+   "nuevo": "50ce64900891"
+  },
+  "docs/panel.html": {
+   "base": "82ce710b8bd6",
+   "nuevo": "b3dec1bf086a"
+  },
+  "docs/tema/participante.css": {
+   "base": null,
+   "nuevo": "65ade71cdcde"
+  },
+  "docs/tema/panel.css": {
+   "base": null,
+   "nuevo": "6b31b781c692"
+  },
+  "docs/tema/participante.js": {
+   "base": null,
+   "nuevo": "00e3da0a82d7"
+  },
+  "docs/tema/panel.js": {
+   "base": null,
+   "nuevo": "5b870d62d523"
+  },
+  "docs/tema/img/cabecera-claro.webp": {
+   "base": null,
+   "nuevo": "dea3a2819b12"
+  },
+  "docs/tema/img/cabecera-oscuro.webp": {
+   "base": null,
+   "nuevo": "37dcdfe31e1d"
+  },
+  "docs/tema/img/cielo-claro.webp": {
+   "base": null,
+   "nuevo": "5a70b5e47f63"
+  },
+  "docs/tema/img/cielo-oscuro.webp": {
+   "base": null,
+   "nuevo": "62fd47584052"
+  },
+  "docs/tema/img/logo-linea-claro.webp": {
+   "base": null,
+   "nuevo": "112f35614322"
+  },
+  "docs/tema/img/logo-linea-oscuro.webp": {
+   "base": null,
+   "nuevo": "dea782c0d795"
+  },
+  "docs/tema/img/logo-marca-claro.webp": {
+   "base": null,
+   "nuevo": "710ee72a2482"
+  },
+  "docs/tema/img/logo-marca-oscuro.webp": {
+   "base": null,
+   "nuevo": "a074b735693d"
+  },
+  "docs/tema/img/logo-texto-claro.webp": {
+   "base": null,
+   "nuevo": "1f9734d79727"
+  },
+  "docs/tema/img/logo-texto-oscuro.webp": {
+   "base": null,
+   "nuevo": "a1d9075ce648"
+  },
+  "docs/tema/img/paisaje-claro-difuso.webp": {
+   "base": null,
+   "nuevo": "578c72ba937b"
+  },
+  "docs/tema/img/paisaje-claro.webp": {
+   "base": null,
+   "nuevo": "63b4234a1512"
+  },
+  "docs/tema/img/paisaje-oscuro-difuso.webp": {
+   "base": null,
+   "nuevo": "bfb4d8fd78fb"
+  },
+  "docs/tema/img/paisaje-oscuro.webp": {
+   "base": null,
+   "nuevo": "6fbb202a2f80"
+  },
+  "local/armar_demos.py": {
+   "base": "157c12c51c66",
+   "nuevo": "991d600deef8"
+  },
+  "tester/tester.py": {
+   "base": "68af3e9aa6a9",
+   "nuevo": "a361826bcde4"
+  },
+  "docs/LEEME-DISENO.md": {
+   "base": "13e2fabc7bde",
+   "nuevo": "9819cf63e8c0"
+  },
+  "CLAUDE.md": {
+   "base": "d090b1286b13",
+   "nuevo": "95ea59acac6b"
+  },
+  "sprints/PLAN.md": {
+   "base": "a32dc946eefb",
+   "nuevo": "f71d8ec6a992"
+  },
+  "sprints/sprint-5/GUIA.md": {
+   "base": null,
+   "nuevo": "67389cd27314"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "f1abb8a88ca3",
+   "nuevo": "c886f3b6acdf"
+  }
+ }
+}

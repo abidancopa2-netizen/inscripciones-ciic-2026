@@ -1,13 +1,29 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="t-participante">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Inscripción · visitas técnicas y talleres</title>
 <link rel="stylesheet" href="base.css">
+<script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"claro":"oscuro";document.documentElement.setAttribute("data-tema",t)})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,300..800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="tema/participante.css">
 <script src="config.js"></script>
 </head>
 <body>
+<!-- Tema CIDEIC · escena decorativa (no forma parte del contrato: se puede quitar sin romper nada) -->
+<div class="escena" aria-hidden="true">
+  <div class="cuadro">
+    <div class="lienzo alto"><div class="capa c-cielo"><i class="v-oscuro"></i><i class="v-claro"></i></div></div>
+    <div class="lienzo bajo"><div class="capa c-paisaje"><i class="v-oscuro"><b class="nitida"></b><b class="difusa"></b></i><i class="v-claro"><b class="nitida"></b><b class="difusa"></b></i><i class="aura"></i></div></div>
+  </div>
+  <div class="velo"></div>
+  <div class="escena-logo"><div class="fila-logo v-oscuro"><img class="l-marca" alt="" src="tema/img/logo-marca-oscuro.webp"><img class="l-linea" alt="" src="tema/img/logo-linea-oscuro.webp"><img class="l-texto" alt="" src="tema/img/logo-texto-oscuro.webp"></div><div class="fila-logo v-claro"><img class="l-marca" alt="" src="tema/img/logo-marca-claro.webp"><img class="l-linea" alt="" src="tema/img/logo-linea-claro.webp"><img class="l-texto" alt="" src="tema/img/logo-texto-claro.webp"></div></div>
+</div>
+<button type="button" class="tema-btn" role="switch" aria-checked="true" aria-label="Modo oscuro" title="Cambiar entre modo claro y oscuro"><span class="tema-pista" aria-hidden="true"><span class="tema-perilla"></span><svg class="i-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></span></button>
+<script>document.body.classList.add('en-inicio');</script>
 <!-- ═══════════════════════════════════════════════════════════════════════
      PÁGINA DEL PARTICIPANTE · contrato v5.5 (documentación, sección 13)
      Para tu diseño: cambia base.css, los textos visibles y el orden visual.
@@ -19,6 +35,7 @@
 
 <header class="cabecera">
   <div class="contenido">
+    <img class="marca v-oscuro" src="tema/img/cabecera-oscuro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130"><img class="marca v-claro" src="tema/img/cabecera-claro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130">
     <h1 id="evento">Congreso</h1>
     <p>Inscripción a visitas técnicas y talleres</p>
   </div>
@@ -375,5 +392,6 @@
   })();
 })();
 </script>
+<script src="tema/participante.js"></script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 # Sistema de inscripciones CIIC 2026 · v5.5 · Documentación técnica completa
 
-Fecha: 06-11-2026 · Revisión 9 (Sprint 4.1) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
+Fecha: 06-11-2026 · Revisión 10 (Sprint 5) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
 
 Este documento describe cada pieza del sistema: qué es, qué hace, qué datos recibe y entrega, y qué reglas cumple. Es la referencia para programar, probar, operar y auditar. Los HTML, el SQL y el tester se construyen contra él, por sprints (sección 23).
 
-La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
+La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
 
 Las marcas **[v5.2]**, **[v5.3]**, **[v5.4]** y **[v5.5]** indican en qué versión del contrato cambió cada punto respecto de lo construido en la v5.1. Lo que no tiene marca ya funciona así en el código construido.
 
@@ -617,11 +617,17 @@ Un enlace de invitación se puede reenviar, y eso no se puede impedir. Lo que s�
 | ENLACE | `null` | "Aún no hay grupo: te escribiremos por WhatsApp" |
 | MANUAL | `null` siempre | [v5.3] "La organización te agregará al grupo con tu número +51 987 654 321. Si no es correcto, escríbenos." |
 
+### 10.5 Confirmación perdida [Sprint 5]
+
+La página no vuelve a mostrar una confirmación (R-31). La reenvía el equipo por WhatsApp, después de comprobar que quien escribe es la persona inscrita: se busca en el panel por el **número desde el que escribe**, no por el documento que dice. Si no coincide, no se le da nada; si ya no tiene ese número, un admin lo atiende por el correo con el que se inscribió. Paso a paso, en `sprints/sprint-5/GUIA.md` (parte C, procedimientos).
+
+Para que "Verificar una solicitud" sirva, cada grupo debe tener activado **Aprobar nuevos participantes** y quienes aprueban deben ser administradores del grupo y tener cuenta en el panel.
+
 ## 11. Datos personales y aviso de privacidad
 
 ### 11.1 Qué es privado
 
-No es solo el celular: todo dato que identifica a una persona es un dato personal según la Ley N.º 29733 de Protección de Datos Personales. En este sistema: documento, nombres, apellidos, celular y correo. Como la base se reutilizará para registrar asistencia y enviar correos automáticos, esas finalidades deben avisarse desde la inscripción.
+No es solo el celular: todo dato que identifica a una persona es un dato personal según la Ley N.º 29733 de Protección de Datos Personales. En este sistema: documento, nombres, apellidos, celular y correo. Como la base se reutilizará para registrar asistencia y, solo si WhatsApp no alcanza, avisar por correo cambios o cancelaciones de una actividad, esas finalidades deben avisarse desde la inscripción. [Sprint 5] No se envía información general por correo: la comunicación va por los grupos de WhatsApp.
 
 ### 11.2 Qué debe decir el aviso
 
@@ -634,19 +640,27 @@ No es solo el celular: todo dato que identifica a una persona es un dato persona
 | Conservación | [v5.4] 90 días después del congreso; después se elimina el proyecto con todos sus datos, los respaldos y los CSV (sección 19.8) |
 | Derechos | Acceso, rectificación, cancelación y oposición, con el canal para pedirlos |
 
-### 11.3 Borrador del aviso (para completar y revisar)
+### 11.3 Aviso de privacidad [final, Sprint 5]
 
-> **Aviso de privacidad · Inscripción a visitas técnicas y talleres del [nombre del congreso]**
->
-> [Nombre de la universidad u organización], con RUC [número] y domicilio en [dirección], es responsable de los datos personales que registras en este formulario: documento de identidad, nombres, apellidos, correo institucional y número de celular.
->
-> Usamos tus datos para: (1) gestionar tu inscripción a visitas técnicas y talleres; (2) coordinar contigo por WhatsApp los detalles de tus actividades; (3) registrar tu asistencia; y (4) enviarte por correo información del evento.
->
-> Solo el equipo organizador accede a tus datos, con cuentas individuales; los encargados de cada visita o taller reciben únicamente la lista de su actividad. No los vendemos ni los compartimos con terceros para otros fines. Los conservaremos hasta 90 días después del congreso y luego los eliminaremos.
->
-> Puedes ejercer tus derechos de acceso, rectificación, cancelación y oposición escribiendo a [correo de contacto]. Este aviso se rige por la Ley N.º 29733 y su reglamento.
+Lo escribe en `config.js` el script `sprints/sprint-5/configurar.py`. Contenido según el deber de información del reglamento (Decreto Supremo N.º 016-2024-JUS, art. 6.1): responsable con RUC y domicilio, banco de datos, finalidades, datos obligatorios y consecuencia de no darlos, destinatarios, transferencia internacional (Supabase, fuera del Perú), ausencia de decisiones automatizadas, plazo de conservación y cómo ejercer los derechos, **incluida la portabilidad** (art. 76, como parte del derecho de acceso), más la vía ante la Autoridad Nacional.
 
-Al correo institucional no se le envía nada: sirve para conciliar datos. Conviene que el aviso lo revise quien vea lo legal en la universidad. Cada vez que cambie el texto, sube `config.aviso_version`.
+> **Aviso de privacidad · Inscripción a visitas técnicas y talleres del VII Congreso Internacional de Estudiantes de Ingeniería Civil (CIDEIC)**
+>
+> **Responsable.** La Universidad Católica de Santa María (UCSM), con RUC 20141637941 y domicilio en Urb. San José s/n, Umacollo, Arequipa, es responsable del tratamiento de los datos personales que registras en este formulario. Se guardan en el banco de datos de inscripciones del congreso, a cargo de la UCSM.
+>
+> **Qué datos y para qué.** Registramos tu documento de identidad, nombres, apellidos, correo institucional, país, número de celular y las actividades que eliges. Los usamos para: (1) gestionar tu inscripción a visitas técnicas y talleres; (2) coordinar contigo por WhatsApp los detalles de tus actividades; (3) registrar tu asistencia; y (4) enviarte por correo solo avisos importantes sobre tu inscripción (cambios de fecha, hora o lugar, o cancelación de una actividad), cuando no podamos comunicarlo por WhatsApp. Todos los datos del formulario son obligatorios: sin ellos no podemos inscribirte. Para proteger el formulario de abusos guardamos por unos minutos datos técnicos de tu conexión, como la dirección IP. No tomamos decisiones automatizadas ni elaboramos perfiles: los cupos se asignan por orden de inscripción.
+>
+> **Quién accede.** Solo el equipo organizador, con cuentas individuales; los encargados de cada visita o taller reciben únicamente la lista de su actividad. No vendemos tus datos ni los compartimos con terceros para otros fines. Si te unes al grupo de WhatsApp de tu actividad, sus demás integrantes verán tu número.
+>
+> **Dónde se guardan.** En los servidores de Supabase (Supabase, Inc.), el proveedor de la plataforma, ubicados fuera del Perú. Supabase solo los guarda por encargo nuestro; es una transferencia internacional (flujo transfronterizo) de datos.
+>
+> **Cuánto tiempo.** Hasta 90 días después del congreso; luego los eliminamos.
+>
+> **Tus derechos.** Puedes ejercer tus derechos de información, acceso, rectificación, cancelación, oposición y portabilidad (recibir tus datos en un formato estructurado, de uso común y lectura mecánica) escribiendo a logisticacideic@gmail.com. Si consideras que no atendimos tu solicitud, puedes acudir a la Autoridad Nacional de Protección de Datos Personales del Ministerio de Justicia y Derechos Humanos. Este aviso se rige por la Ley N.º 29733, Ley de Protección de Datos Personales, y su reglamento, aprobado por el Decreto Supremo N.º 016-2024-JUS.
+
+Para confirmar con quien vea lo legal en la UCSM (no cambian el sistema): si el banco de datos está inscrito en el Registro Nacional de Protección de Datos Personales (y con qué nombre), si la UCSM tiene un oficial de datos personales cuyo contacto deba figurar, y que el flujo transfronterizo se comunique a la Autoridad (art. 21.2). La finalidad 4 quedó acotada a avisos de cambios o cancelaciones cuando WhatsApp no alcanza (decisión del propietario, Sprint 5): se mantiene porque el formulario pide el correo, y un dato que se pide necesita una finalidad avisada. Plazos para responder (art. 69, días hábiles): información 8, acceso 20, rectificación, cancelación y oposición 10. Una solicitud de acceso o portabilidad se atiende con `panel_buscar` y el CSV de participantes.
+
+El texto final es la **versión 1** del aviso en PRODUCCIÓN (nadie se inscribió allí con el borrador). Desde la apertura, cada vez que cambie el texto, sube `config.aviso_version`.
 
 ### 11.4 Cómo aparece en la página
 
@@ -1728,7 +1742,7 @@ Con el congreso el 12 de noviembre, cada sprint dura un día. La v5.1 construida
 | 5 | 09/11 y 10/11 | Diseño de autor sobre `base.css`; equipo invitado con sus roles; ensayo con diez personas, cierre en medio y un cambio por soporte | Tester de navegador en verde y ensayo sin incidencias |
 | 6 | Apertura | Lista de control: respaldo; Sistema → Pasar a producción (vacía lo de prueba y borra la clave del tester); respaldo; tester en lectura; empieza el congelamiento | Tester en modo lectura en verde |
 
-Estado al 06/11: sprints 1 a 3 cerrados (PRUEBA en verde en Supabase y en GitHub; PRODUCCIÓN instalada, vacía, cerrada y sin clave del tester). Sprint 4 entregado (migración 08, `restaurar.py`, bloques W, Y y AF).
+Estado al 06/11: sprints 1 a 4 cerrados (PRUEBA y PRODUCCIÓN en 5.5-s4.1; PRODUCCIÓN vacía, cerrada y sin clave del tester; "Pasar a producción" ensayado por la API real). Sprint 5 entregado: tema CIDEIC, aviso de privacidad final, guía del equipo y del ensayo.
 
 ## 24. Decisiones abiertas
 
@@ -1736,12 +1750,13 @@ Las decisiones del contrato están en la sección 2. Quedan abiertas, sin afecta
 
 | Decisión | Estado | Nota |
 |---|---|---|
-| Combinar el mismo día durante el congreso | Abierta | Hoy apagado; encenderlo da más opciones (visita en la mañana, taller en la tarde) |
-| Margen de traslado | Abierta | 30 minutos propuestos; depende de la distancia a las visitas |
-| Aviso de ampliaciones | Abierta | Avisar cuando una actividad supere su cupo inicial en más de N |
-| Umbral de saturación | Propuesta | 2000 llamadas por ventana de 10 s, sostenidas 3 ventanas; ajustable tras medir con 1000 personas |
-| Dominio del correo | Abierta | Hoy cualquier correo con formato válido; se puede restringir a dominios institucionales |
-| Texto final del aviso de privacidad | Pendiente | Borrador en la sección 11.3 con la retención de 90 días; revisarlo con quien vea lo legal |
+| Actividades por persona | **Decidida (06/11)** | Siempre 2 |
+| Combinar el mismo día durante el congreso | **Decidida (06/11)** | Apagado por defecto; el propietario puede encenderlo desde Actividades → horarios |
+| Margen de traslado | **Decidida (06/11)** | 30 minutos, ajustable por el propietario desde el mismo lugar (solo cuenta con el mismo día encendido) |
+| Aviso de ampliaciones | **Recomendación: no construirlo** | Solo admin y propietario cambian cupos, cada cambio queda en la bitácora y el panel ya muestra "ampliada desde N" en cada actividad. Con 3 personas que pueden ampliar, una alerta automática agrega poco |
+| Umbral de saturación | **Decidida (06/11)** | 2000 llamadas por ventana de 10 s, sostenidas 3 ventanas; sin campo en el panel. Medido: pico de 2342 en una ventana con 1000 personas, sin alerta |
+| Dominio del correo | **Recomendación: no restringir** | El congreso es internacional y de estudiantes de varias universidades: restringir a un dominio (`@ucsm.edu.pe`) dejaría fuera a los demás. La página ya pide "correo institucional" con formato válido |
+| Texto final del aviso de privacidad | **Listo (06/11)** | Sección 11.3, con portabilidad y flujo transfronterizo; confirmar con lo legal de la UCSM los puntos que ahí se listan |
 | Código de entrada como segundo dato | Abierta | Hoy no existe (D15); si aparece, se agrega al padrón |
 | Invitar desde el panel (Edge Function) | Opcional | Hoy se invita desde Supabase |
 

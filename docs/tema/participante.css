@@ -1,0 +1,297 @@
+/* ════════════════════════════════════════════════════════════════════════
+   TEMA CIDEIC v3.1 · modos oscuro y claro, alternancia fluida
+   Se carga DESPUÉS de los estilos base: solo cambia variables y apariencia.
+   No toca ids, data-* ni estructura. La escena (.escena) es decorativa.
+   v3: · el paisaje (puente, volcán, ciudad e iglesia) entra como UN bloque:
+         fundido + ascenso + enfoque, y el logo entra a compás con él;
+       · las versiones clara y oscura están siempre cargadas y se funden;
+   v3.1: · la cinemática arranca cuando la página ya cargó y las imágenes están
+         decodificadas (antes arrancaba a tirones mientras cargaba);
+       · el cambio de modo es un fundido de la tarjeta gráfica (el círculo
+         redibujaba toda la pantalla en cada cuadro); sin colores registrados
+         con @property, que hacían 3 veces más lento cada cambio.
+   Rendimiento: sin backdrop-filter, sin fondos "fixed", sin máscaras CSS,
+   sin desenfoque en vivo (el desenfoque es una imagen aparte de 1,5 KB):
+   solo se animan opacidad y transform.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --fondo: #012617;  --noche: #01170e;  --hoja: #08301f;  --borde: #1f4d39;  --suave: #0d3a28;
+  --tinta: #eef3ea;  --tinta-2: #bfd3c5;  --tinta-3: #88a998;
+  --acento: #eef3ea; --acento-hover: #ffffff; --acento-suave: rgba(238, 243, 234, .1); --sobre-acento: #022417;
+  --menta: #5cc28a;  --menta-suave: rgba(92, 194, 138, .14);  --sobre-menta: #01170e;
+  --exito: #5fd08f;  --aviso: #f2b45a;  --error: #ff8a7a;  --info: #5cc28a;  --whatsapp: #1f9d5a;
+  --linea: rgba(238, 243, 234, .11);  --linea-fuerte: rgba(238, 243, 234, .3);
+  --campo: #04241a;  --placeholder: #5f8572;  --tile: #052a1c;
+  --tarjeta: #0a3424;  --tarjeta-panel: #072c1e;  --cabecera: #021d12;
+  --rejilla: rgba(150, 220, 180, .045);  --brillo: rgba(92, 194, 138, .16);  --aura: rgba(120, 214, 160, .2);
+  --velo-alto: rgba(1, 34, 21, .96);  --velo-medio: rgba(1, 34, 21, .6);  --velo-bajo: rgba(1, 23, 14, .3);
+  --opacidad-fondo: .3;
+  --radio: 14px;
+  --sombra: 0 18px 40px -22px rgba(0, 0, 0, .7), 0 1px 3px rgba(0, 0, 0, .25);
+  --letra: "Saira", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --w-escena: min(88.3vh, 58vw);
+  --logo-w: min(88vw, 600px);
+  --logo-top: 13vh;
+  /* compás de la entrada: una sola curva para escena, logo y formulario */
+  --curva: cubic-bezier(.16, .72, .18, 1);
+  --curva-logo: cubic-bezier(.3, .7, .2, 1);
+  --cambio: .8s;
+  color-scheme: dark;
+}
+:root[data-tema="claro"] {
+  --fondo: #f7f5ee;  --noche: #eef0e8;  --hoja: #ffffff;  --borde: #c9d6cc;  --suave: #eef3ee;
+  --tinta: #10291d;  --tinta-2: #3a5547;  --tinta-3: #6b8276;
+  --acento: #0b4a30; --acento-hover: #0e5c3b; --acento-suave: rgba(11, 74, 48, .08); --sobre-acento: #f7f5ee;
+  --menta: #1f8a55;  --menta-suave: rgba(31, 138, 85, .1);  --sobre-menta: #ffffff;
+  --exito: #1e7f4f;  --aviso: #b26a00;  --error: #c0353f;  --info: #1f8a55;  --whatsapp: #1f8c5c;
+  --linea: rgba(11, 74, 48, .12);  --linea-fuerte: rgba(11, 74, 48, .3);
+  --campo: #ffffff;  --placeholder: #93a69b;  --tile: #f6f8f4;
+  --tarjeta: #ffffff;  --tarjeta-panel: #ffffff;  --cabecera: #fbfaf5;
+  --rejilla: rgba(11, 74, 48, .06);  --brillo: rgba(31, 138, 85, .08);  --aura: rgba(255, 252, 240, .55);
+  --velo-alto: rgba(247, 245, 238, .97);  --velo-medio: rgba(247, 245, 238, .7);  --velo-bajo: rgba(247, 245, 238, .35);
+  --opacidad-fondo: .45;
+  --sombra: 0 14px 34px -20px rgba(11, 50, 30, .35), 0 1px 2px rgba(11, 50, 30, .08);
+  color-scheme: light;
+}
+:root[data-tema="claro"] .boton.peligro { color: #fff; }
+:root[data-tema="claro"] .banner[data-tipo="sin_conexion"] { background: #5d7568; }
+
+/* Versión de cada pieza según el modo: en la escena se FUNDEN (las dos están
+   siempre cargadas, así no hay parpadeo); en la cabecera se intercambian.
+   Fondos (cielo y paisaje, opacos): la versión clara va encima y es la única que
+   se funde; la oscura queda debajo y solo se oculta al terminar (sin "bache" de opacidad). */
+.escena .capa .v-oscuro { transition: opacity 0s; }
+:root[data-tema="claro"] .escena .capa .v-oscuro { opacity: 0; transition: opacity 0s linear var(--cambio); }
+.escena .capa .v-claro, .escena .fila-logo { transition: opacity var(--cambio) ease; }
+:root:not([data-tema="claro"]) .escena .v-claro, :root[data-tema="claro"] .escena .fila-logo.v-oscuro { opacity: 0; }
+:root[data-tema="claro"] .marca.v-oscuro, :root:not([data-tema="claro"]) .marca.v-claro { display: none !important; }
+/* mientras el navegador revela el modo nuevo en círculo, la escena cambia de golpe (debajo del círculo) */
+:root.tema-vt .escena .capa i, :root.tema-vt .escena .fila-logo { transition: none !important; }
+/* cambio de modo: fundido de toda la página que hace la tarjeta gráfica (sin redibujar cuadro a cuadro) */
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: .6s; animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+/* la cinemática espera a que la página termine de cargar e imágenes listas (así no arranca a tirones) */
+:root:not(.escena-lista) .escena *, :root:not(.escena-lista) .tema-btn { animation-play-state: paused !important; }
+/* navegadores sin View Transitions: los colores cambian al instante y la escena se funde sola */
+
+html { background: var(--noche); }
+body { min-height: 100vh; background: var(--fondo); font-feature-settings: "tnum" 1; }
+h1, h2, h3 { font-stretch: 87.5%; font-weight: 650; letter-spacing: .005em; }
+::selection { background: var(--menta); color: var(--noche); }
+:focus-visible { outline: 2px solid var(--menta); outline-offset: 3px; }
+.cabecera, main, .pie, .demo-cinta { position: relative; z-index: 1; }
+
+/* ── Escena ───────────────────────────────────────────────────────────── */
+.escena { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 85% -10%, var(--brillo), transparent 65%),
+    linear-gradient(var(--rejilla) 1px, transparent 1px) 0 0 / 56px 56px,
+    linear-gradient(90deg, var(--rejilla) 1px, transparent 1px) 0 0 / 56px 56px,
+    var(--fondo); }
+.cuadro { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; overflow: hidden; container-type: size;
+  transition: width 1s cubic-bezier(.6, 0, .2, 1); }
+.lienzo { position: absolute; left: 50%; bottom: 0; width: max(100cqw, 88.3cqh); aspect-ratio: 831 / 941;
+  transform: translateX(-50%); transition: opacity 1s ease; }
+.lienzo.alto { bottom: auto; top: 0; }
+.capa { position: absolute; left: 0; width: 100%; will-change: transform, opacity; }
+.capa i, .capa b { position: absolute; inset: 0; display: block; background: center / 100% 100% no-repeat; }
+
+/* Cielo: las ondas superiores bajan y aparecen */
+.c-cielo { top: 0; height: 36.13%;
+  animation: fundir 1.5s ease-out .1s both, descender 1.9s var(--curva) .1s both; }
+.c-cielo .v-oscuro { background-image: url("img/cielo-oscuro.webp"); }
+.c-cielo .v-claro  { background-image: url("img/cielo-claro.webp"); }
+
+/* Paisaje: puente, volcán, ciudad e iglesia entran JUNTOS, como un plano de cine:
+   aparece, sube y se asienta (un leve acercamiento que se retira) mientras pasa
+   de desenfocado a nítido. Todas las piezas son una sola imagen: nada entra por partes. */
+.c-paisaje { bottom: 0; height: 73.43%; transform-origin: 50% 100%;
+  animation: fundir 1.6s ease-out .3s both, asentar 3.2s var(--curva) .3s both; }
+.c-paisaje .v-oscuro .nitida { background-image: url("img/paisaje-oscuro.webp"); }
+.c-paisaje .v-oscuro .difusa { background-image: url("img/paisaje-oscuro-difuso.webp"); }
+.c-paisaje .v-claro  .nitida { background-image: url("img/paisaje-claro.webp"); }
+.c-paisaje .v-claro  .difusa { background-image: url("img/paisaje-claro-difuso.webp"); }
+.c-paisaje .difusa { animation: enfocar 2.3s ease-in-out .75s both; }
+/* luz de amanecer tras el volcán: sube cuando el paisaje se aclara y queda tenue */
+.c-paisaje .aura { inset: 14% 12% 26% 16%; border-radius: 50%; background: radial-gradient(closest-side, var(--aura), transparent);
+  animation: aura 3.4s ease-in-out 1.2s both; }
+@keyframes fundir    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes descender { from { transform: translate3d(0, -6%, 0); } to { transform: none; } }
+@keyframes asentar   { from { transform: translate3d(0, 7%, 0) scale(1.08); } to { transform: none; } }
+@keyframes enfocar   { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
+@keyframes aura      { 0% { opacity: 0; transform: scale(.8); } 45% { opacity: 1; } 100% { opacity: .5; transform: none; } }
+
+/* costura suave entre la escena y la columna del formulario (solo escritorio, inicio) */
+.cuadro::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 12%; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--fondo)); transition: opacity .6s ease; }
+.velo { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease;
+  background: linear-gradient(180deg, var(--velo-alto) 0%, var(--velo-medio) 55%, var(--velo-bajo) 100%); }
+
+/* Logo horizontal: la marca se levanta cuando el paisaje termina de subir,
+   la línea crece y el nombre se despliega mientras todo se asienta. */
+.escena-logo { position: absolute; top: var(--logo-top); left: 50%; width: var(--logo-w); transform: translateX(-50%);
+  display: grid; transition: opacity .8s ease, transform 1s ease; }
+.escena-logo .fila-logo { grid-area: 1 / 1; display: flex; align-items: stretch; }
+.escena-logo img { display: block; height: auto; min-width: 0; }
+.escena-logo .l-marca { width: 44.35%; animation: levantar 1.5s var(--curva-logo) 1.9s both; }
+.escena-logo .l-linea { width: .82%;   animation: crecer .7s ease-out 2.8s both; transform-origin: 50% 100%; }
+.escena-logo .l-texto { width: 54.83%; animation: desplegar 1.25s var(--curva-logo) 3.1s both; }
+@keyframes levantar  { from { clip-path: inset(100% 0 0 0); opacity: .3; } to { clip-path: inset(0); opacity: 1; } }
+@keyframes crecer    { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes desplegar { from { clip-path: inset(0 100% 0 0); transform: translateX(-14px); } to { clip-path: inset(0); transform: none; } }
+
+/* ── Modo inicio (pantalla del DNI / acceso al panel) ───────────────────── */
+body.en-inicio { display: flex; flex-direction: column; }
+body.en-inicio > .cabecera { margin-top: auto; }
+body.en-inicio > .pie { margin-top: auto; }
+body.en-inicio .cabecera, body.en-inicio main { animation: entrar 1s var(--curva) .6s both; }
+@keyframes entrar { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+body.en-inicio .cabecera .contenido, body.en-inicio main.contenido { max-width: 480px; width: 100%; }
+body.en-inicio .cabecera .marca { display: none !important; }
+body:not(.en-inicio) .escena-logo { opacity: 0; transform: translate(-50%, -12px); }
+body:not(.en-inicio) .lienzo { opacity: var(--opacidad-fondo); }
+body:not(.en-inicio) .velo { opacity: 1; }
+/* Pantallas 2 y 3 (y el resto del panel): entran suaves al mostrarse */
+[data-pantalla="2"], [data-pantalla="3"] { animation: entrar .6s var(--curva) both; }
+
+@media (min-width: 920px) {
+  body.en-inicio { padding-left: var(--w-escena); --logo-w: calc(var(--w-escena) * .686); --logo-top: 25vh; }
+  body.en-inicio .cuadro { width: var(--w-escena); }
+  body.en-inicio .cuadro::after { opacity: 1; }
+  body.en-inicio .escena-logo { left: calc(var(--w-escena) * .536); }
+}
+@media (max-width: 919.98px) {
+  body.en-inicio > .cabecera { margin-top: 0; padding-top: calc(var(--logo-top) + var(--logo-w) * .254 + 28px); }
+  .demo-cinta { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  .demo-cinta > * { flex: none; }
+}
+@media (max-width: 919.98px) and (max-aspect-ratio: 3/4) {
+  :root { --logo-top: calc(env(safe-area-inset-top, 0px) + 12vh); }
+  .lienzo { width: 112cqw; }
+}
+
+/* ── Interruptor de modo claro / oscuro ───────────────────────────────── */
+.tema-btn { position: fixed; left: 16px; bottom: 16px; z-index: 15; padding: 4px; border-radius: 99px;
+  border: 1px solid var(--linea-fuerte); background: var(--tarjeta); color: var(--tinta-3); box-shadow: var(--sombra);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; animation: fundir .8s ease 1.4s both; }
+.tema-btn:hover { border-color: var(--menta); }
+.tema-pista { position: relative; display: grid; grid-template-columns: 32px 32px; height: 32px; }
+.tema-pista svg { position: relative; z-index: 1; width: 17px; height: 17px; margin: auto; transition: color .5s ease, transform .6s var(--curva); }
+.tema-perilla { position: absolute; top: 0; left: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--menta);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .35); transform: translateX(32px); transition: transform .6s cubic-bezier(.65, 0, .25, 1); }
+:root[data-tema="claro"] .tema-perilla { transform: none; }
+:root:not([data-tema="claro"]) .tema-btn .i-luna, :root[data-tema="claro"] .tema-btn .i-sol { color: var(--sobre-menta); }
+:root:not([data-tema="claro"]) .tema-btn .i-sol { transform: rotate(-60deg) scale(.85); }
+:root[data-tema="claro"] .tema-btn .i-luna { transform: rotate(40deg) scale(.85); }
+
+/* ── Cabecera ─────────────────────────────────────────────────────────── */
+.cabecera { background: transparent; color: var(--tinta); padding: 22px 16px 10px; }
+.cabecera p { opacity: 1; color: var(--tinta-2); }
+.cabecera .marca { display: block; height: 46px; width: auto; margin: 0 0 14px; }
+.cabecera h1 { font-size: 1.05rem; font-weight: 600; color: var(--tinta-2); margin: 0; }
+body:not(.en-inicio) .cabecera { border-bottom: 1px solid var(--linea); background: var(--cabecera); padding-bottom: 18px; }
+.t-participante body.en-inicio #evento { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.t-participante body.en-inicio .cabecera p { font-size: clamp(1.7rem, 4.2vw, 2.3rem); font-weight: 600; font-stretch: 87.5%; line-height: 1.1; color: var(--tinta); margin: 0; text-wrap: balance; }
+.t-participante body:not(.en-inicio) .cabecera .contenido { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 18px; }
+.t-participante body:not(.en-inicio) .cabecera .marca { grid-row: span 2; margin: 0; padding-right: 18px; border-right: 1px solid var(--linea-fuerte); }
+@media (max-width: 560px) {
+  .t-participante body:not(.en-inicio) .cabecera .contenido { grid-template-columns: 1fr; }
+  .t-participante body:not(.en-inicio) .cabecera .marca { grid-row: auto; border: 0; padding: 0; margin-bottom: 8px; height: 38px; }
+}
+.t-panel .cabecera .contenido.ancho { max-width: 1180px; }
+.t-panel .cabecera-fila > div:first-child { display: flex; flex-direction: column; }
+.t-panel body.en-inicio .cabecera h1 { font-size: clamp(1.6rem, 3.6vw, 2.1rem); color: var(--tinta); font-weight: 650; }
+.t-panel body:not(.en-inicio) .cabecera-fila > div:first-child { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 18px; }
+.t-panel body:not(.en-inicio) .cabecera .marca { margin: 0; height: 40px; padding-right: 18px; border-right: 1px solid var(--linea-fuerte); }
+.t-panel body:not(.en-inicio) .cabecera h1 { color: var(--tinta); }
+.t-panel body:not(.en-inicio) .cabecera p { flex-basis: 100%; font-size: .9rem; margin-top: 6px; }
+@media (max-width: 640px) { .t-panel body:not(.en-inicio) .cabecera .marca { border: 0; padding: 0; height: 34px; } }
+
+/* ── Tarjetas (fondos sólidos: nada de desenfoque en vivo) ────────────── */
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--linea); box-shadow: var(--sombra); padding: 24px; }
+.t-panel .tarjeta { background: var(--tarjeta-panel); }
+.tarjeta h2 { font-size: 1.45rem; }
+.paso { display: flex; align-items: center; gap: 12px; color: var(--menta); font-weight: 600; font-size: .85rem; letter-spacing: .03em; margin-bottom: 8px; }
+.paso::after { content: ""; flex: 1; height: 9px; border-inline: 1px solid currentColor; opacity: .55;
+  background: linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat; }
+
+/* ── Formularios ──────────────────────────────────────────────────────── */
+label { color: var(--tinta-2); font-weight: 500; }
+input, select, textarea { background: var(--campo); border: 1px solid var(--borde); border-radius: 10px; color: var(--tinta);
+  transition: border-color .2s ease, box-shadow .2s ease; }
+input::placeholder, textarea::placeholder { color: var(--placeholder); }
+input:focus, select:focus, textarea:focus { border-color: var(--menta); box-shadow: 0 0 0 3px var(--menta-suave); }
+select option { background: var(--hoja); color: var(--tinta); }
+#doc { font-size: 1.45rem; font-weight: 600; letter-spacing: .14em; padding: 14px 16px; text-align: center; }
+#doc::placeholder { letter-spacing: .04em; font-weight: 400; font-size: 1.05rem; }
+.casilla input { accent-color: var(--menta); }
+
+/* ── Botones ──────────────────────────────────────────────────────────── */
+.boton { font-weight: 650; border-radius: 10px; letter-spacing: .01em; transition: background-color .2s ease, box-shadow .2s ease, transform .15s ease; }
+.boton:hover { filter: none; background-color: var(--acento-hover); }
+.boton:active { transform: translateY(1px); }
+.boton.secundario { background: transparent; color: var(--tinta); box-shadow: inset 0 0 0 1px var(--linea-fuerte); }
+.boton.secundario:hover { background: var(--acento-suave); }
+.boton.peligro { color: #2a0b06; }
+.boton.peligro:hover { background-color: var(--error); filter: brightness(1.08); }
+.boton.whatsapp { color: #fff; }
+.boton.whatsapp:hover { background-color: var(--whatsapp); filter: brightness(1.12); }
+.enlace, a { color: var(--menta); }
+
+/* ── Mensajes ─────────────────────────────────────────────────────────── */
+.mensaje { background: var(--tile); border-radius: 10px; color: var(--tinta); }
+.banner { background: var(--aviso); color: #2a1a00; }
+.banner[data-tipo="sin_conexion"] { background: #42594d; color: #fff; }
+
+/* ── Pantalla 2 y 3 ───────────────────────────────────────────────────── */
+.dia { color: var(--tinta); font-stretch: 87.5%; font-size: 1.05rem; padding-bottom: 6px; border-bottom: 1px solid var(--linea); }
+.opcion { background: var(--tile); border: 1px solid var(--borde); transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.opcion:not(:disabled):hover { border-color: var(--menta); }
+.opcion[aria-pressed="true"] { border-color: var(--menta); background: var(--menta-suave); box-shadow: inset 3px 0 0 var(--menta); }
+.etiqueta[data-tipo="TALLER"] { color: var(--menta); }
+.opcion .quedan { color: var(--tinta-2); }
+.codigo { color: var(--tinta); background: var(--menta-suave); }
+.comprobante dt { color: var(--tinta-3); }
+
+/* ── Panel ────────────────────────────────────────────────────────────── */
+.franja { background: var(--tarjeta-panel); }
+.pestanas { border-bottom-color: var(--linea); }
+.pestanas button { color: var(--tinta-3); font-weight: 600; }
+.pestanas button:hover { color: var(--tinta); }
+.pestanas button[aria-selected="true"] { color: var(--tinta); border-bottom-color: var(--menta); }
+.chip { background: transparent; border-color: var(--linea-fuerte); color: var(--tinta-2); }
+.chip[aria-pressed="true"] { background: var(--menta); border-color: var(--menta); color: var(--sobre-menta); }
+.interruptor { background: var(--campo); border-color: var(--borde); }
+.interruptor[aria-checked="true"] { background: var(--menta); border-color: var(--menta); }
+.numeros div { background: var(--tile); border: 1px solid var(--linea); }
+.numeros b { font-stretch: 87.5%; font-size: 1.55rem; }
+.barra { background: var(--campo); }
+.barra span { background: var(--menta); }
+.tabla th { background: var(--tarjeta-panel); color: var(--tinta-3); }
+dialog { background: var(--hoja); border-color: var(--borde); }
+dialog::backdrop { background: rgba(1, 15, 9, .7); }
+.avisos .mensaje { background: var(--hoja); }
+/* pie con el contacto de soporte: cápsula legible aunque quede sobre el paisaje */
+.pie { width: fit-content; max-width: calc(100% - 32px); margin: 24px auto 76px; padding: 8px 16px; border-radius: 12px; color: var(--tinta-2);
+  background: color-mix(in srgb, var(--tarjeta) 90%, transparent); border: 1px solid var(--linea); text-wrap: balance; }
+body.en-inicio > .pie { margin-top: auto; }
+.pie:empty { display: none; }
+.pie a { color: var(--menta); font-weight: 600; text-decoration: none; white-space: nowrap; border-bottom: 1px solid color-mix(in srgb, currentColor 45%, transparent); }
+.pie a:hover { border-bottom-color: currentColor; }
+
+/* ── Accesibilidad e impresión ────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .capa, .capa i, .capa b, .escena-logo img, .tema-btn, body.en-inicio .cabecera, body.en-inicio main,
+  [data-pantalla="2"], [data-pantalla="3"] { animation: none !important; }
+  .c-paisaje .difusa { opacity: 0; }
+  .c-paisaje .aura { opacity: .5; }
+  .cuadro, .lienzo, .escena-logo, .velo, .cuadro::after, .escena .v-oscuro, .escena .v-claro, .tema-perilla, .tema-pista svg { transition: none; }
+}
+@media print {
+  .escena, .tema-btn { display: none; }
+  html, body { background: #fff !important; color: #111; }
+  :root { --tinta: #111; --tinta-2: #333; --tinta-3: #555; --hoja: #fff; --menta: #1a6b43; --acento: #1a6b43; --tarjeta: #fff; --tile: #f4f4f4; }
+  .tarjeta { box-shadow: none; border-color: #ccc; }
+  .cabecera { background: none !important; border: 0 !important; }
+  .cabecera .marca { filter: brightness(0); }
+}
