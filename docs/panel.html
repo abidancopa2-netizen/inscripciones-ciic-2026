@@ -7,9 +7,7 @@
 <title>Panel de organización</title>
 <link rel="stylesheet" href="base.css">
 <script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches?"oscuro":"claro";document.documentElement.setAttribute("data-tema",t)})();</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,300..800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="tema/fuentes/saira.css">
 <link rel="stylesheet" href="tema/panel.css">
 <script src="config.js"></script>
 </head>
@@ -124,6 +122,16 @@
         <div id="ultimos" class="lista-larga" style="max-height:220px"></div>
       </div>
     </div>
+    <!-- R-46 · Redes con intentos fallidos (admin y propietario). La IP llega enmascarada; "Liberar" usa un id opaco. -->
+    <div class="tarjeta" data-nivel="2" id="tarjeta-redes">
+      <h3>Redes con intentos fallidos</h3>
+      <p class="tenue" id="redes-nota"></p>
+      <div id="redes-lista" aria-live="polite"></div>
+      <div class="control" data-nivel="3"><div><b>Límites de intentos</b><small>Fallos por red y por dispositivo en cada ventana de 10 minutos. Valen de inmediato.</small></div>
+        <div class="botones"><label class="tenue" for="lim-red">Red</label><input id="lim-red" type="number" min="1" max="100000" class="corto" aria-label="Límite por red">
+          <label class="tenue" for="lim-disp">Dispositivo</label><input id="lim-disp" type="number" min="1" max="100" class="corto" aria-label="Límite por dispositivo">
+          <button class="boton chico" id="btn-limites" type="button">Guardar</button></div></div>
+    </div>
     <div class="tarjeta">
       <h3>Actividades</h3>
       <p class="tenue">Ampliar y mostrar se aplican al instante. Reducir y ocultar requieren cerrar las inscripciones.</p>
@@ -143,7 +151,7 @@
           <div><label for="i-cel">Celular (+51)</label><input id="i-cel" inputmode="tel"></div>
           <div><label for="i-nombres">Nombres</label><input id="i-nombres"></div>
           <div><label for="i-apellidos">Apellidos</label><input id="i-apellidos"></div>
-          <div class="completo"><label for="i-correo">Correo institucional</label><input id="i-correo" type="email"></div>
+          <div class="completo"><label for="i-correo">Correo electrónico</label><input id="i-correo" type="email"></div>
           <div><label for="i-a1">Actividad 1</label><select id="i-a1"></select></div>
           <div><label for="i-a2">Actividad 2</label><select id="i-a2"></select></div>
           <div class="completo"><label class="casilla"><input type="checkbox" id="i-ok"> La persona aceptó el aviso de privacidad y el contacto por WhatsApp</label></div>
@@ -319,7 +327,7 @@
   const RANGO = { operador: 1, admin: 2, propietario: 3 };
   const ESCRITURAS = new Set(['panel_config', 'panel_actividad', 'panel_anular', 'panel_inscribir', 'panel_cambiar', 'panel_padron_agregar', 'panel_padron_quitar',
     'panel_crear', 'panel_editar', 'panel_quitar', 'panel_horarios', 'panel_cruce', 'panel_equipo_rol', 'panel_equipo_activo', 'panel_grupo_marcar', 'panel_sincronizar',
-    'panel_padron_importar', 'panel_preparar_produccion', 'panel_vaciar_prueba', 'panel_actividades_importar']);
+    'panel_padron_importar', 'panel_preparar_produccion', 'panel_vaciar_prueba', 'panel_actividades_importar', 'panel_liberar_red']);
   const $ = (id) => document.getElementById(id);
   const el = (tag, attrs, texto) => {
     const e = document.createElement(tag);
@@ -509,8 +517,11 @@
     const c = datos.config, t = datos.trafico || {}, f = $('estado-sis');
     const s = finCuenta ? Math.max(0, Math.ceil((finCuenta - Date.now()) / 1000)) : null;
     f.dataset.estado = c.abierto ? 'abierto' : 'cerrado';
-    f.dataset.alerta = t.alerta ? 'si' : 'no';
+    const rd = datos.redes, frenadas = rd ? rd.redes.filter((x) => x.estado === 'frenada') : [], cerca = rd ? rd.redes.filter((x) => x.estado === 'cerca') : [];
+    f.dataset.alerta = t.alerta || frenadas.length || cerca.length ? 'si' : 'no';
     f.textContent = (t.alerta ? '⚠ SATURACIÓN SOSTENIDA: más de ' + t.umbral + ' llamadas por ventana de 10 s durante 30 s · ' : '') +
+      (frenadas.length ? '⛔ RED FRENADA: ' + frenadas.map((x) => x.red).join(', ') + ' (ver "Redes con intentos fallidos") · ' : '') +
+      (cerca.length ? '⚠ RED CERCA DEL LÍMITE: ' + cerca.map((x) => x.red + ' ' + x.pct + ' %').join(', ') + ' · ' : '') +
       (c.abierto ? 'ABIERTO · ronda ' + c.ronda + (s != null ? ' · se cierra en ' + mmss(s) : '') + ' · solo se permiten cambios que agregan opciones'
                  : 'CERRADO · ronda ' + c.ronda + ' · puedes hacer los cambios que quitan opciones') + (c.modo === 'PRUEBA' ? ' · modo PRUEBA' : '');
     $('est-txt').textContent = c.abierto ? (s != null ? 'Abiertas · se cierran en ' + mmss(s) : 'Abiertas · ronda ' + c.ronda) : 'Cerradas · ronda ' + c.ronda;
@@ -530,7 +541,7 @@
     if (document.activeElement !== $('paso')) $('paso').value = c.pasoCupo;
     $('sw-mismo').setAttribute('aria-checked', String(c.mismoDia));
     if (document.activeElement !== $('margen')) $('margen').value = c.margenMin;
-    pintarTotales(); pintarActividades(); pintarCruces(); pintarCatalogo(); pintarSelects();
+    pintarTotales(); pintarRedes(); pintarActividades(); pintarCruces(); pintarCatalogo(); pintarSelects();
     if ((RANGO[rol] || 0) >= 2) cargarIncidencias();
   }
   function pintarEstado() {
@@ -571,6 +582,32 @@
     const ul = $('ultimos'); ul.textContent = datos.ultimos.length ? '' : 'Aún no hay inscripciones.';
     datos.ultimos.forEach((x) => ul.appendChild(el('div', { class: 'act' }, String(x.fecha).slice(11, 16) + ' · ' + x.codigo + ' · ' + x.nombre + ' · ' + x.actividades.join(' + ') + ' · ' + x.origen)));
   }
+  // R-46 · Redes con intentos fallidos: solo llega a admin y propietario (panel_resumen la trae según el rol)
+  function pintarRedes() {
+    const x = datos.redes, caja = $('redes-lista');
+    if (!x) return;
+    const min = (s) => Math.max(1, Math.ceil(s / 60));
+    $('redes-nota').textContent = 'Límite: ' + x.limite + ' fallos por red en cada ventana de ' + x.ventanaMin + ' min. Esta ventana se reinicia en ' + min(x.reiniciaEnSeg) +
+      ' min. Se listan las redes desde ' + x.desde + ' fallos.';
+    caja.textContent = '';
+    if (!x.redes.length) caja.appendChild(el('p', { class: 'tenue', 'data-tipo': 'sin_redes' }, 'Ninguna red con muchos intentos fallidos.'));
+    x.redes.forEach((r) => {
+      const d = el('div', { class: 'act', 'data-red': r.id, style: 'display:block' });
+      d.appendChild(el('b', {}, r.red));
+      d.appendChild(el('span', {}, ' · ' + r.fallos + ' fallos · ' + r.pct + ' % del límite · se reinicia en ' + min(x.reiniciaEnSeg) + ' min '));
+      d.appendChild(el('span', { class: 'estado', 'data-v': r.estado === 'frenada' ? 'mal' : r.estado === 'cerca' ? 'aviso' : 'ok' },
+        r.estado === 'frenada' ? 'frenada' : r.estado === 'cerca' ? 'cerca del límite' : 'normal'));
+      if (RANGO[rol] >= 3) d.appendChild(boton('Liberar red', { style: 'margin-left:8px' }, async () => {
+        if (await preguntar({ titulo: 'Liberar ' + r.red, texto: 'El contador de la red vuelve a 0 y quienes estén en ella pueden volver a verificar su documento (salvo un celular que haya llegado a su propio límite de intentos: ese espera su ventana). Queda en la bitácora.', ok: 'Liberar red' }))
+          accion('panel_liberar_red', { id: r.id }, r.red + ' liberada: su contador volvió a 0.');
+      }));
+      caja.appendChild(d);
+    });
+    if (document.activeElement !== $('lim-red')) $('lim-red').value = datos.config.limiteRed;
+    if (document.activeElement !== $('lim-disp')) $('lim-disp').value = datos.config.limiteDispositivo;
+  }
+  $('btn-limites').addEventListener('click', () => accion('panel_config', { limiteRed: $('lim-red').value, limiteDispositivo: $('lim-disp').value },
+    'Límites guardados: ' + $('lim-red').value + ' por red y ' + $('lim-disp').value + ' por dispositivo.'));
   async function cargarIncidencias() {
     const r = await api('panel_incidencias'); const caja = $('incidencias'); caja.textContent = '';
     if (!r.ok) return;
@@ -989,7 +1026,7 @@
     const r = el('button', { type: 'button' }, '↺ Reiniciar datos'); r.addEventListener('click', async () => { window.CIIC_DEMO.reiniciar(); if (datos) { await refrescar(); aviso({ ok: true, tipo: 'panel' }, 'Datos de prueba reiniciados.'); } }); c.appendChild(r);
     const sel = el('select', { 'aria-label': 'Ver estado' });
     [['', 'Ver estado…'], ['alerta', 'Alerta de saturación'], ['cuenta', 'Cuenta regresiva'], ['cerrado', 'Cerrado'], ['integridad', 'Integridad rota'], ['advertencia', 'Ventana de advertencia'],
-     ['error', 'Aviso de error'], ['sin_conexion', 'Sin conexión'], ['login', 'Inicio de sesión real'], ['codigo', 'Código de verificación'], ['reset', 'Restablecer']]
+     ['redes', 'Redes cerca y frenada'], ['error', 'Aviso de error'], ['sin_conexion', 'Sin conexión'], ['login', 'Inicio de sesión real'], ['codigo', 'Código de verificación'], ['reset', 'Restablecer']]
       .forEach(([v, t]) => sel.appendChild(el('option', { value: v }, t)));
     sel.addEventListener('change', () => { simular(sel.value); sel.value = ''; });
     c.appendChild(sel);
@@ -1016,6 +1053,12 @@
     if (cual === 'cuenta') { datos.config.cierraEn = 120; finCuenta = Date.now() + 120000; pintarFranja(); pintarEstado(); }
     if (cual === 'cerrado') { datos.config.abierto = false; datos.config.cierraEn = null; finCuenta = null; pintar(); }
     if (cual === 'integridad') { datos.integridad = { ok: false, descuadres: ['VIS03', 'TAL07'] }; pintarTotales(); }
+    if (cual === 'redes') {
+      datos.redes = Object.assign({ limite: 300, ventanaMin: 10, desde: 50, reiniciaEnSeg: 380 }, datos.redes || {});
+      datos.redes.redes = [{ id: 'demo1', red: '190.234.•.•', fallos: 300, pct: 100, estado: 'frenada' }, { id: 'demo2', red: '200.48.•.•', fallos: 251, pct: 83, estado: 'cerca' },
+                           { id: 'demo3', red: '179.6.•.•', fallos: 64, pct: 21, estado: 'normal' }];
+      pintarFranja(); pintarRedes();
+    }
     if (cual === 'advertencia') preguntar({ titulo: 'Bajar el cupo de VIS03', texto: '"Presa de derivación Huachipa" tiene 15 inscritos. No se puede bajar a 10 sin anular a 5 personas. Puedes dejarla en 15: queda llena y no entra nadie más.', ok: 'Dejarla en 15 y cerrarla', llave: 'VIS03' });
     if (cual === 'error') aviso({ tipo: 'error_servidor', mensaje: 'Ocurrió un error en el sistema. Intenta de nuevo en unos segundos.', incidencia: 'INC-0007' });
     if (cual === 'sin_conexion') aviso({ tipo: 'sin_conexion', mensaje: 'No hay conexión con el sistema.' });

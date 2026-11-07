@@ -115,6 +115,20 @@
   }
   const trafico = () => { const w = Math.floor(Date.now() / VENTANA); return { ventana10s: S.trafico[w] || 0, pico10s: S.pico || 0, alerta: !!S.alerta, umbral: S.cfg.umbral }; };
   const ventanaIntentos = () => Math.floor(Date.now() / (S.cfg.ventanaMin * 60000));
+  // R-25 (Sprint 5.1): lo de ventanas ya terminadas se borra (en la base lo hace contar_llamada, una vez por ventana de 10 s)
+  const limpiarIntentos = () => { const v = ventanaIntentos(); Object.keys(S.intentos).forEach((k) => { if (S.intentos[k].v < v) delete S.intentos[k]; }); };
+  // R-46 · Redes con intentos fallidos: IP enmascarada e id opaco, como en la base
+  const redOculta = (ip) => ip === 'demo' ? 'red de la demo' : /^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip.split('.').slice(0, 2).join('.') + '.•.•' : /^[0-9a-f]{1,4}:[0-9a-f]{0,4}:/i.test(ip) ? ip.split(':').slice(0, 2).join(':').toLowerCase() + ':•' : 'desconocida';
+  const redId = (clave) => { let h = 2166136261; for (const ch of 'sal-demo|' + clave) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h.toString(16).padStart(8, '0') + '00000000'; };
+  function redesJson() {
+    const c = S.cfg, v = ventanaIntentos(), desde = Math.min(50, Math.ceil(c.limiteRed * 0.8));
+    const r = Object.entries(S.intentos).filter(([k, x]) => k.startsWith('red:') && x.v === v).map(([k, x]) => ({ clave: k, fallos: x.n }));
+    const fin = (v + 1) * c.ventanaMin * 60000;
+    return { limite: c.limiteRed, ventanaMin: c.ventanaMin, desde, reiniciaEnSeg: Math.max(0, Math.ceil((fin - Date.now()) / 1000)),
+      cerca: r.filter((x) => x.fallos >= 0.8 * c.limiteRed && x.fallos < c.limiteRed).length, frenadas: r.filter((x) => x.fallos >= c.limiteRed).length,
+      redes: r.filter((x) => x.fallos >= desde).sort((a, b) => b.fallos - a.fallos).slice(0, 50).map((x) => ({ id: redId(x.clave), red: redOculta(x.clave.slice(4)),
+        fallos: x.fallos, pct: Math.floor(100 * x.fallos / c.limiteRed), estado: x.fallos >= c.limiteRed ? 'frenada' : x.fallos >= 0.8 * c.limiteRed ? 'cerca' : 'normal' })) };
+  }
   const fallosDe = (k) => { const x = S.intentos[k]; return x && x.v === ventanaIntentos() ? x.n : 0; };
   function frenado(ctx) {
     if (ctx.dispositivo && fallosDe('disp:' + ctx.dispositivo) >= S.cfg.limiteDispositivo) return 'dispositivo';
@@ -192,7 +206,7 @@
     const nombres = limpio(b.nombres, 60), apellidos = limpio(b.apellidos, 60), correo = limpio(b.correo, 100).toLowerCase();
     if (nombres.length < 2) return fallo('datos_invalidos', 'Escribe tus nombres.', { campo: 'nombres' });
     if (apellidos.length < 2) return fallo('datos_invalidos', 'Escribe tus apellidos.', { campo: 'apellidos' });
-    if (!esCorreo(correo)) return fallo('datos_invalidos', 'Escribe tu correo institucional.', { campo: 'correo' });
+    if (!esCorreo(correo)) return fallo('datos_invalidos', 'Escribe tu correo electrónico.', { campo: 'correo' });
     const tel = celular(b.pais, b.celular);
     if (!tel) return fallo('celular_invalido', String(b.pais || 'PE').toUpperCase() === 'PE' ? 'Revisa tu celular: en Perú son 9 dígitos y empiezan con 9.' :
       'Revisa tu celular: escribe entre 6 y 14 dígitos, sin el código de país.', { campo: 'celular' });
@@ -222,14 +236,14 @@
   const RANGO = { operador: 1, admin: 2, propietario: 3 };
   const NIVEL = { panel_resumen: 1, panel_participantes: 1, panel_buscar: 1, panel_verificar_celular: 1, panel_lista: 1, panel_grupo_marcar: 1, panel_exportar: 1,
     panel_actividad: 2, panel_crear: 2, panel_editar: 2, panel_quitar: 2, panel_cruce: 2, panel_inscribir: 2, panel_cambiar: 2, panel_anular: 2,
-    panel_padron_agregar: 2, panel_padron_quitar: 2, panel_incidencias: 2, panel_sincronizar: 2, panel_registros: 2,
+    panel_padron_agregar: 2, panel_padron_quitar: 2, panel_incidencias: 2, panel_sincronizar: 2, panel_registros: 2, panel_redes: 2, panel_liberar_red: 3,
     panel_horarios: 3, panel_equipo: 3, panel_equipo_rol: 3, panel_equipo_activo: 3, panel_respaldo: 3, panel_padron_importar: 3, panel_preparar_produccion: 3,
     panel_vaciar_prueba: 3, panel_actividades_importar: 3 };
   const nivelConfig = (b) => (b.abierto === true || Array.isArray(b.etapas) || Array.isArray(b.etapasVisita) || typeof b.dosTalleres === 'boolean' ||
     b.refresco != null || b.umbral != null || b.limiteDispositivo != null || b.limiteRed != null) ? 3 : 2;
   const ESCRITURAS = new Set(['registrar', 'panel_config', 'panel_actividad', 'panel_anular', 'panel_inscribir', 'panel_cambiar', 'panel_padron_agregar', 'panel_padron_quitar',
     'panel_crear', 'panel_editar', 'panel_quitar', 'panel_horarios', 'panel_cruce', 'panel_equipo_rol', 'panel_equipo_activo', 'panel_grupo_marcar', 'panel_sincronizar',
-    'panel_padron_importar', 'panel_preparar_produccion', 'panel_vaciar_prueba', 'panel_actividades_importar']);
+    'panel_padron_importar', 'panel_preparar_produccion', 'panel_vaciar_prueba', 'panel_actividades_importar', 'panel_liberar_red']);
   const requiereCierre = () => fallo('requiere_cierre', 'Este cambio quita opciones a quien está eligiendo. Cierra las inscripciones, haz el cambio y vuelve a abrir.');
   function sesion(ctx) {
     const u = S.equipo.find((x) => x.id === ctx.sesion);
@@ -308,10 +322,20 @@
             porOrigen: { WEB: conf.filter((i) => i.origen === 'WEB').length, PANEL: conf.filter((i) => i.origen === 'PANEL').length },
             padron: { 1: S.padron.filter((p) => p.etapa === 1).length, 2: S.padron.filter((p) => p.etapa === 2).length, 3: S.padron.filter((p) => p.etapa === 3).length },
             visitas: { ocupados: vis.reduce((t, a) => t + a.inscritos, 0), cupo: vis.reduce((t, a) => t + a.cupo, 0) }, fallos10min: fallos, frenados },
-          integridad: integridad(), trafico: trafico(), ultimoRespaldo: S.ultimoRespaldo,
+          integridad: integridad(), trafico: trafico(), ultimoRespaldo: S.ultimoRespaldo, ...(RANGO[s.rol] >= 2 ? { redes: redesJson() } : {}),
           actividades: ordenar(S.acts).map(completa), cruces: listaCruces(),
           repetidos: Object.entries(porCel).filter(([, l]) => l.length > 1).map(([celular, personas]) => ({ celular, personas })),
           ultimos: conf.slice(-15).reverse().map((i) => ({ fecha: i.creado, codigo: i.codigo, doc: i.documento, nombre: i.nombres + ' ' + i.apellidos, etapa: i.etapa, origen: i.origen, actividades: i.acts.slice() })) };
+      }
+      case 'panel_redes': return Object.assign({ ok: true, tipo: 'panel' }, redesJson());
+      case 'panel_liberar_red': {
+        const v = ventanaIntentos();
+        const k = Object.keys(S.intentos).find((x) => x.startsWith('red:') && S.intentos[x].v === v && redId(x) === String(b.id || '').trim().toLowerCase());
+        if (!k) return fallo('no_encontrado', 'Esa red ya no tiene intentos fallidos en esta ventana: no hay nada que liberar.');
+        const n = S.intentos[k].n, red = redOculta(k.slice(4));
+        delete S.intentos[k];
+        bit(s.quien, 'Liberar red', red + ' · ' + n + ' fallos en la ventana');
+        return Object.assign({ ok: true, tipo: 'panel', liberada: red, fallos: n }, redesJson());
       }
       case 'panel_config': {
         if (b.abierto === false && c.abierto) {
@@ -654,7 +678,7 @@
     ctx = ctx || {};
     await new Promise((r) => setTimeout(r, 120 + Math.random() * 180));   // latencia de red simulada
     cargar();
-    contarLlamada();
+    contarLlamada(); limpiarIntentos();
     aplicarCierreProgramado();
     let r;
     try {

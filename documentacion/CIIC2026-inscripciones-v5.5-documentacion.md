@@ -1,10 +1,10 @@
 # Sistema de inscripciones CIIC 2026 · v5.5 · Documentación técnica completa
 
-Fecha: 06-11-2026 · Revisión 10 (Sprint 5) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
+Fecha: 07-11-2026 · Revisión 11 (Sprint 5.1) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
 
 Este documento describe cada pieza del sistema: qué es, qué hace, qué datos recibe y entrega, y qué reglas cumple. Es la referencia para programar, probar, operar y auditar. Los HTML, el SQL y el tester se construyen contra él, por sprints (sección 23).
 
-La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
+La revisión 11 (Sprint 5.1) agrega las redes con intentos fallidos en el panel (R-46), la limpieza de intentos al terminar su ventana (R-25), la fuente alojada en `docs/tema/fuentes/` y el aviso de privacidad corregido (11.3). La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
 
 Las marcas **[v5.2]**, **[v5.3]**, **[v5.4]** y **[v5.5]** indican en qué versión del contrato cambió cada punto respecto de lo construido en la v5.1. Lo que no tiene marca ya funciona así en el código construido.
 
@@ -76,7 +76,7 @@ Tres principios ordenan todo el diseño:
 | D14 [v5.3] | Emergencias | Por gravedad y sin pausar el proyecto (sección 18.2) | — |
 
 | D15 [v5.4] | Suplantación | Riesgo aceptado: no hay segundo dato. La barrera es el límite de 4 intentos por dispositivo. Si después existe un código de entrada por persona, se agrega como segundo dato | — |
-| D16 [v5.4] | Correo institucional | Obligatorio, pero **no se le envía nada**: sirve para conciliar y para identificar impostores. El dato clave de contacto es el celular | `correo` también en `panel_inscribir` |
+| D16 [v5.4] | Correo | Obligatorio y de cualquier dominio [Sprint 5.1]. Sirve para conciliar, para identificar impostores y, solo si WhatsApp no alcanza, para avisar cambios o cancelaciones de una actividad (finalidad 4 del aviso). El dato clave de contacto es el celular | `correo` también en `panel_inscribir` |
 | D17 [v5.4] | Plan gratuito | Sin plan de pago. Sin copias automáticas: respaldo manual desde el panel, cada hora el día de apertura (RPO 1 h) y restauración en menos de 2 h (RTO) | `panel_respaldo`, `restaurar.py` |
 | D18 [v5.4] | Congelamiento | Desde 24 h antes de abrir hasta el fin del congreso (incluida la semana de exámenes) no se corre SQL en producción: todo por el panel | — |
 | D19 [v5.4] | Protección masiva | La base bloquea `DELETE`, `UPDATE` y `TRUNCATE` que afecten más de 10 filas de las tablas críticas, salvo permiso explícito en esa transacción | Trigger por sentencia |
@@ -279,7 +279,8 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 - **Qué dice:** se crean en el Panel 3 con su cupo inicial y nacen ocultas. Se muestran desde el Panel 1.
 
 ### R-25 · Límite de intentos
-- **Qué dice:** 4 documentos fallidos por dispositivo en 10 minutos; 30 por red en 10 minutos. Un acierto reinicia el contador del dispositivo.
+- **Qué dice:** 4 documentos fallidos por dispositivo en 10 minutos; 300 por red en 10 minutos [Sprint 5.1; antes 30]. Un acierto reinicia el contador del dispositivo. La ventana es fija, alineada al reloj (hh:00, hh:10…): al empezar la siguiente, el contador vuelve a 0. Los límites se cambian desde Operación → Redes con intentos fallidos (propietario) y valen de inmediato.
+- **Retención [Sprint 5.1]:** las filas de `intentos` (IP de la red e identificador del navegador) se borran en cuanto termina su ventana. Lo hace la consulta `estado` (`privado.limpiar_intentos`), que las páginas abiertas repiten cada 20 s, de a una por vez y con `SKIP LOCKED`: nunca espera ni hace esperar a verificar o registrar. Sin visitas, la consulta horaria de "Mantener Supabase activo" hace lo mismo. Nunca entran en el respaldo.
 - **Detalle:** sección 8.
 
 ### R-26 · Roles por nivel [v5.3]
@@ -389,6 +390,11 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 - **Qué dice:** el propietario sube un CSV con encabezado (sección 14.6), hasta 500 actividades. Cada fila se valida como en `panel_crear` (tipo, nombre, fecha, horas, cupo, entrega y enlace). Con `id` existente: no se modifica y se informa. Sin `id`: se asigna el siguiente (`VIS…`, `TAL…`). Nacen ocultas salvo `visible = SI`.
 - **Si falla:** el informe lista cada fila inválida con su motivo; las válidas se agregan igual.
 - **Nivel:** 3.
+
+### R-46 · Redes con intentos fallidos [Sprint 5.1]
+- **Qué dice:** el panel (Operación) muestra a admin y propietario las redes de la ventana actual con 50 fallos o más, o con el 80 % del límite si el límite es bajo (con 5, desde 4). Por red: la IP enmascarada (`190.234.•.•`, IPv6 `2800:200:•`), los fallos, el % del límite, los minutos para que se reinicie y el estado: normal, cerca (80 %) o frenada (el límite). La franja de arriba avisa cuando una red está cerca o frenada. El propietario puede **Liberar red**: su contador vuelve a 0 y queda en la bitácora con la IP enmascarada.
+- **Privacidad:** la IP completa nunca sale de la base. Cada red viaja con un id opaco (HMAC con una sal guardada en `privado.sal`) que solo sirve para liberarla.
+- **Acciones:** `panel_redes` (nivel 2) y `panel_liberar_red` (nivel 3, con `solicitud`). `panel_resumen` trae el mismo resumen (`redes`) para admin y propietario.
 
 ## 6. Cerrar y depurar
 
@@ -634,25 +640,25 @@ No es solo el celular: todo dato que identifica a una persona es un dato persona
 | Punto | Contenido |
 |---|---|
 | Responsable | Quién recoge los datos (universidad u organización), con RUC, dirección y contacto |
-| Datos | Documento y etapa (padrón); nombres, apellidos, correo institucional y celular (formulario) |
+| Datos | Documento y etapa (padrón); nombres, apellidos, correo electrónico y celular (formulario) |
 | Finalidades | Inscripción a visitas y talleres; coordinación por WhatsApp; registro de asistencia; información del evento por correo |
 | Quién accede | El equipo organizador, con cuenta individual y rol; los encargados de cada visita o taller reciben solo la lista de su actividad |
 | Conservación | [v5.4] 90 días después del congreso; después se elimina el proyecto con todos sus datos, los respaldos y los CSV (sección 19.8) |
 | Derechos | Acceso, rectificación, cancelación y oposición, con el canal para pedirlos |
 
-### 11.3 Aviso de privacidad [final, Sprint 5]
+### 11.3 Aviso de privacidad [final, Sprint 5.1]
 
-Lo escribe en `config.js` el script `sprints/sprint-5/configurar.py`. Contenido según el deber de información del reglamento (Decreto Supremo N.º 016-2024-JUS, art. 6.1): responsable con RUC y domicilio, banco de datos, finalidades, datos obligatorios y consecuencia de no darlos, destinatarios, transferencia internacional (Supabase, fuera del Perú), ausencia de decisiones automatizadas, plazo de conservación y cómo ejercer los derechos, **incluida la portabilidad** (art. 76, como parte del derecho de acceso), más la vía ante la Autoridad Nacional.
+Lo escribe en `config.js` el script `sprints/sprint-5.1/configurar.py` (huella del texto `11590a4931c3`). El Sprint 5.1 corrigió tres frases que no coincidían con el sistema: la IP se guardaba más que "unos minutos" (ahora solo se usa para el límite de 10 minutos y se borra al terminar su ventana, R-25), la fuente venía de Google Fonts (ahora está en `docs/tema/fuentes/`) y se mencionan GitHub Pages y los registros técnicos de los proveedores; y "correo institucional" pasó a "correo electrónico" (no se restringe el dominio, 24). Contenido según el deber de información del reglamento (Decreto Supremo N.º 016-2024-JUS, art. 6.1): responsable con RUC y domicilio, banco de datos, finalidades, datos obligatorios y consecuencia de no darlos, destinatarios, transferencia internacional (Supabase, fuera del Perú), ausencia de decisiones automatizadas, plazo de conservación y cómo ejercer los derechos, **incluida la portabilidad** (art. 76, como parte del derecho de acceso), más la vía ante la Autoridad Nacional.
 
 > **Aviso de privacidad · Inscripción a visitas técnicas y talleres del VII Congreso Internacional de Estudiantes de Ingeniería Civil (CIDEIC)**
 >
 > **Responsable.** La Universidad Católica de Santa María (UCSM), con RUC 20141637941 y domicilio en Urb. San José s/n, Umacollo, Arequipa, es responsable del tratamiento de los datos personales que registras en este formulario. Se guardan en el banco de datos de inscripciones del congreso, a cargo de la UCSM.
 >
-> **Qué datos y para qué.** Registramos tu documento de identidad, nombres, apellidos, correo institucional, país, número de celular y las actividades que eliges. Los usamos para: (1) gestionar tu inscripción a visitas técnicas y talleres; (2) coordinar contigo por WhatsApp los detalles de tus actividades; (3) registrar tu asistencia; y (4) enviarte por correo solo avisos importantes sobre tu inscripción (cambios de fecha, hora o lugar, o cancelación de una actividad), cuando no podamos comunicarlo por WhatsApp. Todos los datos del formulario son obligatorios: sin ellos no podemos inscribirte. Para proteger el formulario de abusos guardamos por unos minutos datos técnicos de tu conexión, como la dirección IP. No tomamos decisiones automatizadas ni elaboramos perfiles: los cupos se asignan por orden de inscripción.
+> **Qué datos y para qué.** Registramos tu documento de identidad, nombres, apellidos, correo electrónico, país, número de celular y las actividades que eliges. Los usamos para: (1) gestionar tu inscripción a visitas técnicas y talleres; (2) coordinar contigo por WhatsApp los detalles de tus actividades; (3) registrar tu asistencia; y (4) enviarte por correo solo avisos importantes sobre tu inscripción (cambios de fecha, hora o lugar, o cancelación de una actividad), cuando no podamos comunicarlo por WhatsApp. Todos los datos del formulario son obligatorios: sin ellos no podemos inscribirte. Para proteger el formulario de abusos, cuando un intento de verificación falla guardamos la dirección IP de tu conexión y un identificador al azar que la página crea en tu navegador; los usamos solo para el límite de intentos, que dura 10 minutos, y después se borran automáticamente. No tomamos decisiones automatizadas ni elaboramos perfiles: los cupos se asignan por orden de inscripción.
 >
 > **Quién accede.** Solo el equipo organizador, con cuentas individuales; los encargados de cada visita o taller reciben únicamente la lista de su actividad. No vendemos tus datos ni los compartimos con terceros para otros fines. Si te unes al grupo de WhatsApp de tu actividad, sus demás integrantes verán tu número.
 >
-> **Dónde se guardan.** En los servidores de Supabase (Supabase, Inc.), el proveedor de la plataforma, ubicados fuera del Perú. Supabase solo los guarda por encargo nuestro; es una transferencia internacional (flujo transfronterizo) de datos.
+> **Dónde se guardan.** En los servidores de Supabase (Supabase, Inc.), el proveedor de la plataforma, ubicados fuera del Perú. Supabase solo los guarda por encargo nuestro; es una transferencia internacional (flujo transfronterizo) de datos. Esta página se publica en GitHub Pages (GitHub, Inc., de Estados Unidos), que no recibe los datos del formulario. Como todo servicio web, GitHub y Supabase registran la dirección IP de cada conexión en sus registros técnicos, por el tiempo que fijan sus propias políticas.
 >
 > **Cuánto tiempo.** Hasta 90 días después del congreso; luego los eliminamos.
 >
@@ -784,7 +790,7 @@ Toda respuesta es JSON con `ok`, `tipo` y `mensaje`. Si no trae `tipo` ni `ok`, 
 | `dispositivo` | texto | verificar, registrar | Identificador guardado en `localStorage` | `"d-7f3a9c2e"` |
 | `nombres` [v5.2] | texto | registrar | 2 a 60 caracteres | `"María"` |
 | `apellidos` [v5.2] | texto | registrar | 2 a 60 caracteres | `"Quispe Rojas"` |
-| `correo` [v5.3] | texto | registrar | **Obligatorio**: correo institucional con formato válido | `"maria.quispe@uni.edu.pe"` |
+| `correo` [v5.3] | texto | registrar | **Obligatorio**: correo electrónico con formato válido, de cualquier dominio [Sprint 5.1] | `"maria.quispe@uni.edu.pe"` |
 | `pais` | texto | registrar | PE, CL, CO, EC, BO, AR, MX, BR, VE, PY, UY, ES, US | `"PE"` |
 | `celular` | texto | registrar | Solo el número, sin código de país | `"987654321"` |
 | `aceptaPrivacidad` [v5.2] | booleano | registrar | `true` (sección 11) | `true` |
@@ -934,7 +940,7 @@ Llaves de la ventana de advertencia:
 | Buscar | Código, nombre, celular, actividades, estado, origen | Buscar | `panel_buscar {q}` | operador | — |
 | Buscar | | Cambiar inscripción | `panel_cambiar {codigo, actividades, ampliarCupo}` | admin | — |
 | Buscar | | Anular | `panel_anular {codigo}` | admin | — |
-| Inscribir | Documento, nombres, apellidos, correo institucional [v5.4], actividad 1 y 2, celular, consentimiento (privacidad y WhatsApp) | Inscribir | `panel_inscribir {…, solicitud}` | admin | — |
+| Inscribir | Documento, nombres, apellidos, correo electrónico [v5.4], actividad 1 y 2, celular, consentimiento (privacidad y WhatsApp) | Inscribir | `panel_inscribir {…, solicitud}` | admin | — |
 | Celulares repetidos | Celular y personas | Ir a buscar | `panel_resumen.repetidos` | operador | — |
 
 ### 14.3 Panel 2 · Participantes
@@ -1076,7 +1082,7 @@ Una sola base, abierta a crecer: lo que llene el formulario, lo que entregue la 
 | `refresco` | int | 20 | Segundos entre refrescos de la página (10 a 120) |
 | `total_por_persona` | int | 2 | Actividades por inscripción (R-02) |
 | `limite_dispositivo` | int | 4 | R-25 |
-| `limite_red` | int | 30 | R-25 |
+| `limite_red` | int | 300 [Sprint 5.1] | R-25 |
 | `ventana_min` | int | 10 | R-25 |
 | `modo` | text | PRUEBA | PRUEBA o PRODUCCION (el tester solo actúa en PRUEBA) |
 
@@ -1137,7 +1143,7 @@ Clave primaria [v5.2]: `documento`.
 | `codigo` | text | Clave primaria; CIIC-XXXXX |
 | `documento` | text | Normalizado |
 | `nombres`, `apellidos` [v5.2] | text | Lo que escribió la persona |
-| `correo` | text | [v5.3] Obligatorio: correo institucional |
+| `correo` | text | [v5.3] Obligatorio: correo electrónico (cualquier dominio) |
 | `etapa` | smallint | Etapa con la que entró |
 | `celular`, `pais` | text | `+51987654321`, PE |
 | `acepta_whatsapp`, `acepta_privacidad` [v5.2] | boolean | `CHECK` ambos verdaderos |
@@ -1281,6 +1287,8 @@ Formato del pedido: `{"p": {"action": "...", ...}}`. [v5.2] Toda escritura revis
 | `panel_vaciar_prueba` [v5.5] | propietario | `llave` ("VACIAR"), `solicitud` | R-44 | `panel` con `eliminados` (padrón, actividades, inscripciones); `modo_produccion`, `requiere_cierre`, `valor_invalido` |
 | `panel_actividades_importar` [v5.5] | propietario | `filas` (hasta 500), `solicitud` | R-45 | `panel` con `agregadas`, `existentes`, `invalidas` |
 | `panel_preparar_produccion` [v5.4] | propietario | `llave` ("PRODUCCION"), `solicitud` | R-43 | `panel`, `requiere_cierre`, `modo_produccion`, `valor_invalido` |
+| `panel_redes` [Sprint 5.1] | admin | — | R-46 | `panel` con `limite`, `ventanaMin`, `desde`, `reiniciaEnSeg`, `cerca`, `frenadas` y `redes` (`id`, `red` enmascarada, `fallos`, `pct`, `estado`) |
+| `panel_liberar_red` [Sprint 5.1] | propietario | `id` (de `panel_redes`), `solicitud` | R-46 | `panel` con `liberada` y `fallos`, más el resumen de redes; `no_encontrado` si ya no tiene fallos en la ventana |
 | `admin_ping`, `admin_muestra`, `admin_limpiar` | tester | `key`; limpiar acepta `docs`, `padron` e `intentos` | modo PRUEBA | Diagnóstico · documentos sin inscribir · borra solo lo del tester |
 | `admin_cabeceras` [v5.2] | tester | `key` | modo PRUEBA | Las cabeceras que llegan (`cabeceras`, `cf-connecting-ip`, `x-real-ip`, `x-forwarded-for`), `ipCabecera` y la `red` resuelta |
 | `admin_error` [Sprint 1] | tester | `key` | modo PRUEBA | Provoca un error interno a propósito para probar las incidencias (R-36) |
@@ -1742,7 +1750,7 @@ Con el congreso el 12 de noviembre, cada sprint dura un día. La v5.1 construida
 | 5 | 09/11 y 10/11 | Diseño de autor sobre `base.css`; equipo invitado con sus roles; ensayo con diez personas, cierre en medio y un cambio por soporte | Tester de navegador en verde y ensayo sin incidencias |
 | 6 | Apertura | Lista de control: respaldo; Sistema → Pasar a producción (vacía lo de prueba y borra la clave del tester); respaldo; tester en lectura; empieza el congelamiento | Tester en modo lectura en verde |
 
-Estado al 06/11: sprints 1 a 4 cerrados (PRUEBA y PRODUCCIÓN en 5.5-s4.1; PRODUCCIÓN vacía, cerrada y sin clave del tester; "Pasar a producción" ensayado por la API real). Sprint 5 entregado: tema CIDEIC, aviso de privacidad final, guía del equipo y del ensayo.
+Estado al 07/11: sprints 1 a 4 cerrados. Sprint 5 aplicado en PRUEBA (tema CIDEIC, aviso de privacidad, guía del equipo y del ensayo; local 364/364, GitHub 295/295). Sprint 5.1 entregado: migración 10 (redes con intentos fallidos, limpieza de intentos, límite por red 300), fuente local, aviso corregido, prueba de la red de la UCSM y plan de contingencia. PRODUCCIÓN sigue en 5.5-s4.1, vacía y cerrada: la migración 10 se le instala en el Sprint 6, después del ensayo.
 
 ## 24. Decisiones abiertas
 
@@ -1754,9 +1762,10 @@ Las decisiones del contrato están en la sección 2. Quedan abiertas, sin afecta
 | Combinar el mismo día durante el congreso | **Decidida (06/11)** | Apagado por defecto; el propietario puede encenderlo desde Actividades → horarios |
 | Margen de traslado | **Decidida (06/11)** | 30 minutos, ajustable por el propietario desde el mismo lugar (solo cuenta con el mismo día encendido) |
 | Aviso de ampliaciones | **Recomendación: no construirlo** | Solo admin y propietario cambian cupos, cada cambio queda en la bitácora y el panel ya muestra "ampliada desde N" en cada actividad. Con 3 personas que pueden ampliar, una alerta automática agrega poco |
+| Límites de intentos | **Decidida (07/11)** | 4 por dispositivo y 300 por red, en ventanas fijas de 10 minutos; el propietario los cambia desde Operación → Redes con intentos fallidos. Con el Wi-Fi de la UCSM (una IP por pabellón), la tarjeta avisa al 80 % para subirlo antes de que se frene |
 | Umbral de saturación | **Decidida (06/11)** | 2000 llamadas por ventana de 10 s, sostenidas 3 ventanas; sin campo en el panel. Medido: pico de 2342 en una ventana con 1000 personas, sin alerta |
-| Dominio del correo | **Recomendación: no restringir** | El congreso es internacional y de estudiantes de varias universidades: restringir a un dominio (`@ucsm.edu.pe`) dejaría fuera a los demás. La página ya pide "correo institucional" con formato válido |
-| Texto final del aviso de privacidad | **Listo (06/11)** | Sección 11.3, con portabilidad y flujo transfronterizo; confirmar con lo legal de la UCSM los puntos que ahí se listan |
+| Dominio del correo | **Decidida (07/11): no restringir** | El congreso es internacional y de estudiantes de varias universidades: restringir a un dominio (`@ucsm.edu.pe`) dejaría fuera a los demás. La página ya pide "correo institucional" con formato válido |
+| Texto final del aviso de privacidad | **Listo (07/11, Sprint 5.1)** | Sección 11.3, con portabilidad, flujo transfronterizo, IP por minutos y GitHub Pages; confirmar con lo legal de la UCSM los puntos que ahí se listan |
 | Código de entrada como segundo dato | Abierta | Hoy no existe (D15); si aparece, se agrega al padrón |
 | Invitar desde el panel (Edge Function) | Opcional | Hoy se invita desde Supabase |
 

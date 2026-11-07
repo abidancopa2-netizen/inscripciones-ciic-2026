@@ -283,7 +283,7 @@ def main():
         assert n <= x['cupo'], (x['id'], n, x['cupo'])
     estado = {
         'cfg': {'abierto': True, 'ronda': 1, 'cierreEn': None, 'etapas': [1, 2], 'etapasVisita': [1], 'dosTalleres': True, 'mismoDia': False, 'margenMin': 30,
-                'pasoCupo': 5, 'refresco': 20, 'modo': 'PRUEBA', 'limiteDispositivo': 4, 'limiteRed': 30, 'ventanaMin': 10, 'umbral': 2000, 'limiteMasivo': 10, 'avisoVersion': 1},
+                'pasoCupo': 5, 'refresco': 20, 'modo': 'PRUEBA', 'limiteDispositivo': 4, 'limiteRed': 300, 'ventanaMin': 10, 'umbral': 2000, 'limiteMasivo': 10, 'avisoVersion': 1},
         'tipos': {'VISITA': {'nombre': 'Visita técnica', 'max': 1}, 'TALLER': {'nombre': 'Taller', 'max': 2}},
         'acts': acts, 'cruces': ['TAL06|VIS05'], 'padron': pad, 'ins': ins,
         'equipo': [{'id': 'u-tu', 'correo': 'tu@ciic.pe', 'nombre': 'Tú (propietario)', 'rol': 'propietario', 'activo': True, 'totp': True},

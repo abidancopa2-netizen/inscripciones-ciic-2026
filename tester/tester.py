@@ -58,7 +58,7 @@ class Abortar(Exception):
 ESCRITURAS = {'registrar', 'panel_config', 'panel_actividad', 'panel_anular', 'panel_inscribir', 'panel_cambiar', 'panel_padron_agregar',
               'panel_padron_quitar', 'panel_crear', 'panel_editar', 'panel_quitar', 'panel_horarios', 'panel_cruce', 'panel_equipo_rol',
               'panel_equipo_activo', 'panel_grupo_marcar', 'panel_sincronizar', 'panel_padron_importar', 'panel_actividades_importar',
-              'panel_vaciar_prueba', 'panel_preparar_produccion'}
+              'panel_vaciar_prueba', 'panel_preparar_produccion', 'panel_liberar_red'}
 SIN = '__sin__'      # solicitud=SIN: no se envía (para probar que la base la exige)
 
 
@@ -620,6 +620,76 @@ class Tester:
         self.ok('Otra red sigue libre', r.get('tipo') == 'ok', 'ok', r.get('tipo'))
         self.panel('panel_config', limiteRed=100000)
 
+    def al_redes(self):
+        """R-46 · Redes con intentos fallidos, y R-25 · los intentos se borran al terminar su ventana (Sprint 5.1)."""
+        self.seccion('AL · Redes con intentos fallidos y limpieza de intentos (R-46, R-25)')
+        como = lambda rol, **d: self.cli.llamar({'key': self.key, 'comoRol': rol, **d})
+        self.tipo('El operador no ve las redes', como('operador', action='panel_redes'), 'sin_permiso')
+        r = como('operador', action='panel_resumen')
+        self.ok('El resumen del operador no trae las redes', r.get('tipo') == 'panel' and 'redes' not in r, 'sin redes', sorted(k for k in r if k == 'redes'))
+        r = como('admin', action='panel_resumen')
+        self.ok('El resumen de admin trae las redes (límite, ventana y lista)', isinstance(r.get('redes', {}).get('redes'), list) and r['redes'].get('ventanaMin') == self.cfg0.get('ventanaMin', 10),
+                'redes', str(r.get('redes'))[:80])
+        if not self.a.local and os.environ.get('GITHUB_ACTIONS') == 'true':
+            self.omitir('Una red cerca, frenada y liberada', 'en GitHub la IP de salida puede cambiar entre llamadas: se prueba en local y desde una PC')
+            return
+        # Red propia: en local se simula con X-Red-Prueba; contra Supabase es la IP real de este equipo (se libera al final, pase lo que pase)
+        cab = {'X-Red-Prueba': f'10.{random.randint(1, 250)}.{random.randint(1, 250)}.{random.randint(1, 250)}'} if self.a.local else None
+        ip = cab['X-Red-Prueba'] if cab else self.cli.llamar({'action': 'admin_cabeceras', 'key': self.key}).get('red')
+        limpiar = lambda: self.cli.llamar({'action': 'admin_limpiar', 'key': self.key, 'intentos': True})
+        fallar = lambda: self.cli.llamar({'action': 'verificar', 'dni': str(20000000 + random.randint(0, 9999999)), 'dispositivo': 'tl-' + uuid.uuid4().hex[:10]}, cab=cab)
+        limpiar()                                    # sin fallos previos de esta red
+        self.panel('panel_config', limiteRed=5)
+        try:
+            for _ in range(4):
+                fallar()
+            r = como('admin', action='panel_redes')
+            redes = r.get('redes') or []
+            x = redes[0] if len(redes) == 1 else {}
+            self.ok('Con 4 fallos de 5 la red aparece "cerca" (80 %)', (x.get('estado'), x.get('fallos'), x.get('pct')) == ('cerca', 4, 80),
+                    "('cerca', 4, 80)", (x.get('estado'), x.get('fallos'), x.get('pct')))
+            oculta = re.sub(r'^(\d+\.\d+)\.\d+\.\d+$', r'\1.•.•', ip) if re.match(r'^\d+(\.\d+){3}$', ip or '') else None
+            self.ok('La IP llega enmascarada y la completa nunca sale de la base', bool(x) and '•' in x.get('red', '') and (oculta is None or x.get('red') == oculta)
+                    and (not ip or ip not in json.dumps(r)), oculta or 'a:b:•', x.get('red'))
+            self.ok('Se reinicia en minutos (ventana fija de 10 min)', 0 < (r.get('reiniciaEnSeg') or 0) <= r.get('ventanaMin', 10) * 60, '1–600 s', r.get('reiniciaEnSeg'))
+            fallar()
+            r = como('admin', action='panel_redes')
+            x = (r.get('redes') or [{}])[0]
+            self.ok('Al quinto fallo la red queda "frenada" (100 %)', (x.get('estado'), x.get('pct')) == ('frenada', 100), "('frenada', 100)", (x.get('estado'), x.get('pct')))
+            self.ok('El resumen de admin cuenta 1 frenada', como('admin', action='panel_resumen').get('redes', {}).get('frenadas') == 1, 1, '')
+            r = self.cli.llamar({'action': 'verificar', 'dni': self.muestra['1'][0]}, cab=cab)
+            self.ok('Esa red no puede verificar ni un documento válido', r.get('motivo') == 'red', 'red', r.get('motivo') or r.get('tipo'))
+            self.tipo('Admin no puede liberar una red (es del propietario)', como('admin', action='panel_liberar_red', id=x.get('id')), 'sin_permiso')
+            r = self.panel('panel_liberar_red', id=x.get('id'))
+            self.ok('El propietario la libera: vuelve a 0 y sale de la lista', r.get('ok') is True and r.get('fallos') == 5 and not r.get('redes'),
+                    'liberada · 5', (r.get('tipo'), r.get('fallos'), len(r.get('redes') or [])))
+            self.tipo('Liberarla otra vez → no_encontrado', self.panel('panel_liberar_red', id=x.get('id')), 'no_encontrado')
+            self.tipo('La red liberada vuelve a verificar', self.cli.llamar({'action': 'verificar', 'dni': self.muestra['1'][0]}, cab=cab), 'ok')
+        finally:
+            limpiar()
+            self.panel('panel_config', limiteRed=100000)
+        con = self.sql()
+        if not con:
+            self.omitir('Bitácora de "Liberar red" y borrado de ventanas terminadas', 'requiere --dsn')
+            return
+        try:
+            with con.cursor() as c:
+                c.execute("select detalle from bitacora where accion = 'Liberar red' order by id desc limit 1")
+                b = (c.fetchone() or [''])[0]
+                self.ok('Queda en la bitácora, con la IP enmascarada', '•' in b and '5 fallos' in b and (not ip or ip not in b), 'Liberar red · …•… · 5 fallos', b)
+                # R-25: lo de ventanas terminadas lo borra la siguiente consulta "estado" (las páginas la hacen cada 20 s)
+                c.execute("insert into intentos (clave, ventana, fallos) values ('red:198.51.100.77', privado.ventana() - interval '10 minutes', 3), "
+                          "('disp:tl-viejo', privado.ventana() - interval '1 day', 2) on conflict do nothing")
+            con.commit()
+            self.estado()
+            with con.cursor() as c:
+                c.execute('select count(*) from intentos where ventana < privado.ventana()')
+                n = c.fetchone()[0]
+            self.ok('Los intentos de ventanas terminadas se borran con la siguiente consulta "estado" (IP e identificador)', n == 0, 0, n)
+        finally:
+            con.rollback()
+            con.close()
+
     def k_soporte(self):
         self.seccion('K · Soporte: cambiar inscripción (R-20, R-21)')
         acts = self.acts()
@@ -799,7 +869,7 @@ class Tester:
         ('panel_incidencias', 2, {}), ('panel_sincronizar', 2, {}), ('panel_registros', 2, {}),
         ('panel_horarios', 3, {}), ('panel_equipo', 3, {}), ('panel_equipo_rol', 3, {'usuario': 'x'}), ('panel_equipo_activo', 3, {'usuario': 'x'}),
         ('panel_respaldo', 3, {}), ('panel_padron_importar', 3, {}), ('panel_actividades_importar', 3, {}), ('panel_vaciar_prueba', 3, {}),
-        ('panel_preparar_produccion', 3, {}),
+        ('panel_preparar_produccion', 3, {}), ('panel_redes', 2, {}), ('panel_liberar_red', 3, {'id': '0000000000000000'}),
     ]
 
     def ab_niveles(self):
@@ -1075,7 +1145,8 @@ class Tester:
         tipos = [r.get('tipo') for r in rs]
         ahora = self.acts()
         self.ok('100 personas por los últimos 10 cupos: entran 10 exactas', tipos.count('registrado') == 10, 10, tipos.count('registrado'), str(set(tipos)))
-        self.ok('Las otras 90 reciben lleno', tipos.count('lleno') == 90, 90, tipos.count('lleno'))
+        self.ok_conexion('Las otras 90 reciben lleno', tipos.count('lleno') == 90, tipos.count('lleno') + tipos.count('sin_conexion') == 90,
+                         tipos.count('sin_conexion'), 90, tipos.count('lleno'))
         self.ok('Sin sobrecupo y todo o nada (el día 1 solo sumó 10)', ahora[t2['id']]['inscritos'] == ahora[t2['id']]['cupo'] and ahora[t1['id']]['inscritos'] == t1['inscritos'] + 10,
                 'lleno · +10', f"{ahora[t2['id']]['inscritos']}/{ahora[t2['id']]['cupo']} · +{ahora[t1['id']]['inscritos'] - t1['inscritos']}")
         # dos cambios simultáneos de la misma inscripción
@@ -1284,8 +1355,14 @@ class Tester:
         r = self.panel('panel_padron_importar', filas=[{'documento': x, 'etapa': str(1 + k % 3)} for k, x in enumerate(grande)])
         dur = time.perf_counter() - t0
         self.padron_nuevo.update(grande)
-        self.ok('10 000 filas en una llamada, dentro del límite de 3 s', r.get('tipo') == 'panel' and r.get('agregados', 0) + r.get('existentes', 0) == 10000 and dur < 3,
-                '10 000 · < 3 s', f"{r.get('tipo')} · {r.get('agregados')} · total {dur:.2f} s · en la base {(r.get('duracionMs') or 0) / 1000:.2f} s")
+        base = (r.get('duracionMs') or 0) / 1000
+        completo = r.get('tipo') == 'panel' and r.get('agregados', 0) + r.get('existentes', 0) == 10000
+        texto = '10 000 filas en una llamada: menos de 3 s en la base'
+        obtenido = f"{r.get('tipo')} · {r.get('agregados')} · en la base {base:.2f} s · total {dur:.2f} s"
+        if completo and base < 3 and dur >= 3 and self.remota:      # Sprint 5.1: desde una PC el total incluye su red
+            self.omitir(texto, f'AVISO: {obtenido}. La base tardó lo esperado; el resto es la red de este equipo. La referencia es la corrida de GitHub')
+        else:
+            self.ok(texto, completo and base < 3 and dur < 3, '10 000 · < 3 s en la base', obtenido)
 
     def ak_importar_actividades(self):
         self.seccion('AK · Importar actividades (R-45)')
@@ -1594,6 +1671,13 @@ class Tester:
             ctx = nav.new_context()
             # La página publicada apunta al proyecto de su config.js (en producción, el real): el tester la prueba contra --api.
             ctx.route('**/config.js', lambda ruta: ruta.fulfill(status=200, content_type='application/javascript; charset=utf-8', body=config_js))
+            # Sprint 5.1: archivos propios que fallan (tema, fuente, imágenes) y sitios de terceros a los que llaman las páginas
+            propios_mal, terceros = [], set()
+            propio = lambda u: u.startswith(web) and '/rest/v1/' not in u and '/auth/v1/' not in u
+            ctx.on('response', lambda x: propios_mal.append(f'{x.status} {x.url[len(web):][:60]}') if propio(x.url) and x.status >= 400 else None)
+            ctx.on('requestfailed', lambda q: propios_mal.append(f'{q.failure} {q.url[len(web):][:60]}')
+                   if propio(q.url) and 'ABORTED' not in str(q.failure or '') else None)
+            ctx.on('request', lambda q: terceros.add(re.sub(r'^https?://([^/:]+).*$', r'\1', q.url)) if q.url.startswith('http') and not q.url.startswith(web) else None)
 
             def pagina(ancho, alto):
                 x = ctx.new_page()
@@ -1699,6 +1783,9 @@ class Tester:
                     descarga.value.save_as(str(f))
                     v = self._restaurar(f, '--verificar')
                     self.ok('Panel: "Descargar respaldo" baja un archivo que restaurar.py verifica', v.returncode == 0, 'íntegro', (v.stdout + v.stderr)[-120:])
+                self.ok('Página y panel: todos sus archivos cargan (tema, fuente e imágenes)', not propios_mal, 'ninguno falla', propios_mal[:3])
+                google = sorted(h for h in terceros if 'fonts.g' in h or h.endswith('google.com'))
+                self.ok('Página y panel: no llaman a Google (la fuente Saira está en docs/tema/fuentes)', not google, 'ninguna llamada', google)
             except Exception as e:  # noqa: BLE001
                 self.ok('Navegador sin errores', False, 'sin errores', str(e)[:200])
                 pg.screenshot(path=str(fotos / 'error.png'))
@@ -1885,6 +1972,15 @@ class Tester:
             return
         self.ok(texto, not extra, 'registrado o lleno', sorted(set(extra)))
 
+    def ok_conexion(self, texto, cond, cond_sin_conexion, n_sin, esperado, obtenido):
+        """Una prueba de carga que solo falla porque algunas personas se quedaron sin conexión desde este equipo (Sprint 5.1).
+        cond_sin_conexion es la misma condición contando "sin_conexion" como un resultado posible: si con eso se cumple, desde
+        una PC es AVISO; en GitHub y en local sigue siendo FALLA."""
+        if not cond and cond_sin_conexion and n_sin and self.remota:
+            self.omitir(texto, f'AVISO: {n_sin} sin conexión desde este equipo (ningún error de la base). La referencia es la corrida de GitHub')
+            return
+        self.ok(texto, cond, esperado, obtenido)
+
     def ok_tiempo(self, texto, p95, limite, m0):
         """El tiempo de una carga. Contra Supabase desde un equipo, si el tiempo se pasó SOLO por fallas de conexión de ese equipo
         (sin_conexion: TLS, red) y la base nunca respondió "ocupado", es un aviso, no una falla: la base no se saturó (Sprint 5)."""
@@ -1945,8 +2041,10 @@ class Tester:
         acts = self.acts()
         falsos = [x[3] for x in rs if x[0] == 'lleno' and not any(acts[i]['inscritos'] >= acts[i]['cupo'] for i in x[3])]
         self.ok('Cada "lleno" corresponde a una actividad que de verdad se llenó', not falsos, 'ninguno falso', falsos[:3])
-        self.ok('Quien eligió talleres con cupo de sobra quedó inscrito', all(x[0] == 'registrado' for x in rs
-                if x[3] and all(acts[i]['tipo'] == 'TALLER' for i in x[3])), 'todos', '')
+        talleres = [x[0] for x in rs if x[3] and all(acts[i]['tipo'] == 'TALLER' for i in x[3])]
+        self.ok_conexion('Quien eligió talleres con cupo de sobra quedó inscrito', all(x == 'registrado' for x in talleres),
+                         all(x in ('registrado', 'sin_conexion') for x in talleres), talleres.count('sin_conexion'), 'todos',
+                         sorted(set(x for x in talleres if x != 'registrado')))
         self.ok('Ninguna actividad con sobrecupo', all(a['inscritos'] <= a['cupo'] for a in acts.values()), 'ninguna', [a['id'] for a in acts.values() if a['inscritos'] > a['cupo']])
         reg = self.panel('panel_registros')
         i_doc, i_est = reg['encabezados'].index('Documento'), reg['encabezados'].index('Estado')
@@ -2133,7 +2231,7 @@ def main():
         print('⛔ Falta API_URL o ANON_KEY: pégalos en docs/config.js o usa --api y --anon.')
         return 2
     t = Tester(a)
-    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 5) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
+    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 5.1) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
     inicio, error = time.perf_counter(), None
     try:
         if a.modo == 'lectura':
@@ -2144,7 +2242,7 @@ def main():
             t.preparar()
             try:
                 for b in (t.a_conexion, t.b_documentos, t.c_etapas, t.d_combinaciones, t.e_cupos, t.f_panel, t.h_cierre, t.i_horarios,
-                          t.j_intentos, t.k_soporte, t.l_whatsapp, t.m_roles, t.n_padron_catalogo, t.o_equipo,
+                          t.j_intentos, t.al_redes, t.k_soporte, t.l_whatsapp, t.m_roles, t.n_padron_catalogo, t.o_equipo,
                           t.s_comprobantes, t.x_incidencias, t.ab_niveles, t.r_privilegios, t.r_ip_real, t.z_equipo, t.ad_masiva, t.ag_bitacora,
                           t.t_carreras, t.u_idempotencia, t.ai_ambito, t.v_integridad, t.aa_listas, t.ac_padron_minimo, t.ah_correo_panel,
                           t.ae_importar_padron, t.ak_importar_actividades, t.aj_vaciar, t.y_respaldo, t.af_produccion,

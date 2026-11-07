@@ -1,4 +1,4 @@
-# Sprint 5 · Guía del equipo y del ensayo con 10 personas
+# Sprint 5 · Guía del equipo, del ensayo con 10 personas y de la apertura
 
 👤 = lo haces tú (propietario) · 🤖 = lo hace Claude Code · 👥 = el equipo o los voluntarios.
 
@@ -6,8 +6,8 @@ Todo esto ocurre en **PRUEBA**, con la base ficticia. Las cuentas de PRUEBA no s
 
 ## A · Antes de empezar (🤖)
 
-1. Aplicar el Sprint 5 según su `LEEME.md`: local, PRUEBA, commit y push.
-2. Confirmar en el panel publicado que se ven el tema nuevo y el aviso de privacidad final, sin `[corchetes]`.
+1. Aplicar el Sprint 5 y el 5.1 según sus `LEEME.md`: local, PRUEBA, commit y push.
+2. Confirmar en el panel publicado que se ven el tema nuevo, la tarjeta "Redes con intentos fallidos" y el aviso de privacidad final, sin `[corchetes]`.
 
 ## B · Invitar al equipo en PRUEBA (👤, 15 minutos)
 
@@ -50,6 +50,71 @@ Si alguien pierde el teléfono con el autenticador: 👤 desactívalo en Sistema
 
 Para los datos de la pantalla 2, cada voluntario usa **su** nombre o uno inventado y un correo de prueba. Los voluntarios **1, 2, 5 y 8** escriben su celular real, porque prueban WhatsApp; los demás pueden inventarlo. Todo se borra al final con "Vaciar". Los enlaces de grupo de PRUEBA son ficticios, salvo el del grupo de ensayo.
 
+### Antes del ensayo: prueba de la red de la UCSM (👤, en el campus, 30 minutos)
+
+**Para qué:** saber antes de la apertura si el Wi-Fi y el firewall de la UCSM dejan pasar el sistema, y si un pabellón entero sale a internet con una sola IP. Es en **PRUEBA** y **sin pruebas de carga**: esas, solo con permiso de TI (el correo para TI está más abajo).
+
+**Necesitas:** 2 celulares (al menos uno con datos móviles), una laptop si puedes (para ver el certificado) y tu cuenta del panel.
+
+En el pabellón de la facultad (y en otro, si quieres comparar), conectado al Wi-Fi de la UCSM:
+
+1. **Red:** si hay más de una red Wi-Fi (estudiantes, invitados, eduroam), prueba cada una. Si aparece una página para iniciar sesión en el Wi-Fi (portal cautivo), anótalo: la gente tendrá que pasarla antes de abrir la inscripción.
+2. **Página:** abre `https://abidancopa2-netizen.github.io/inscripciones-ciic-2026/`. Debe cargar completa: paisaje, logo CIDEIC, letra Saira y el botón de modo.
+3. **Verificar:** escribe `32003385` (documento ficticio de PRUEBA) y pulsa Verificar. Debe pasar a la pantalla 2 (no confirmes). Anota cuántos segundos tardó, y repite con datos móviles para comparar.
+4. **Panel:** abre `https://abidancopa2-netizen.github.io/inscripciones-ciic-2026/panel.html` y entra con correo, contraseña y código. Debe abrir Operación: así se prueban Supabase Auth y jsDelivr.
+5. **WhatsApp:** abre el enlace del grupo de ensayo. Debe abrir WhatsApp.
+6. **Certificado (inspección SSL):** en la laptop, con Chrome, en la página: ícono a la izquierda de la dirección → "La conexión es segura" → "El certificado es válido" → **Emitido por**. Repite abriendo la dirección `API_URL` de `config.js` (termina en `.supabase.co`): mostrará un error en texto, es normal; lo que importa es el certificado. Si dice una autoridad pública (por ejemplo Google Trust Services, Let's Encrypt, DigiCert o Sectigo), no hay inspección. Si dice Fortinet, FortiGate, Sophos, Palo Alto, Cisco o el nombre de la UCSM, el firewall inspecciona el tráfico: anótalo y pregúntale a TI.
+7. **IP pública:** en cada celular, busca "cuál es mi IP" en Google. Anota solo los 2 primeros números, y compara de palabra si los 2 celulares tienen la misma IP completa.
+8. **Freno por red:** en el panel, Operación → Redes con intentos fallidos → Límites: **Red = 5** → Guardar.
+   - Cada celular escribe 3 documentos que no existen (`11111111`, `22222222`, `33333333`).
+   - Con 4 fallos, la red aparece "cerca del límite" y la franja avisa. Con 5, aparece "frenada". Compara la IP enmascarada (`190.234.•.•`) con los 2 números que anotaste.
+   - Desde el Wi-Fi, `32003385` debe dar "Hay demasiados intentos fallidos desde tu red". Con datos móviles, debe pasar.
+   - Pulsa **Liberar red**: `32003385` vuelve a pasar desde el Wi-Fi.
+   - Si los celulares no comparten IP, ninguno llega a 5 y no se frena: eso también es un resultado.
+   - **Al terminar: Red = 300 → Guardar.**
+
+| Pabellón | Red Wi-Fi | IP (2 primeros números) | Portal | Carga la página | Verifica DNI (s, Wi-Fi / datos) | Entra al panel | Certificado emitido por | Comparten IP | Se frena con 5 |
+|---|---|---|---|---|---|---|---|---|---|
+|  |  |  |  |  |  |  |  |  |  |
+
+**Correo para TI de la UCSM** (envíalo antes de la prueba; completa lo que está entre corchetes):
+
+```
+Asunto: VII CIDEIC · Consulta sobre la red de la UCSM para la inscripción en línea
+
+Estimado equipo de TI:
+
+Soy [nombre], de la organización del VII Congreso Internacional de Estudiantes de Ingeniería
+Civil (CIDEIC). El [día] a las [hora] abriremos en línea la inscripción a las visitas técnicas
+y talleres del congreso. Esperamos que muchos estudiantes se inscriban a la vez desde el
+campus, sobre todo desde el pabellón de [facultad], con el Wi-Fi de la universidad.
+
+El sistema usa estos servicios, todos por HTTPS (puerto 443):
+- abidancopa2-netizen.github.io: la página de inscripción (GitHub Pages)
+- *.supabase.co: la base de datos y el inicio de sesión del equipo (detrás de Cloudflare)
+- cdn.jsdelivr.net: una librería que usa solo el panel del equipo organizador
+- chat.whatsapp.com: los enlaces a los grupos de cada actividad
+
+Quisiéramos confirmar con ustedes:
+1. ¿El Wi-Fi de estudiantes permite el acceso a esos dominios?
+2. Entendemos que cada pabellón sale a internet con una sola IP pública. ¿Es así? ¿Hay
+   límites de conexiones o de tráfico por usuario, por IP o hacia un mismo destino que
+   puedan afectar a cientos de personas a la vez durante unos minutos?
+3. ¿El firewall inspecciona el tráfico cifrado (SSL/TLS)? Si es así, ¿podrían exceptuar
+   esos dominios durante la inscripción?
+4. ¿El Wi-Fi tiene una página de inicio de sesión (portal) que los estudiantes deban pasar?
+5. ¿Podemos hacer una prueba corta de carga desde el campus, coordinada con ustedes? Por
+   ejemplo, unos 30 celulares a la vez durante 5 minutos, en el horario que nos indiquen.
+6. ¿Hay algún mantenimiento previsto para el [día]? ¿A quién podemos llamar durante la
+   apertura si notamos problemas de red?
+
+El tráfico de cada persona es liviano: unas pocas consultas pequeñas en pocos minutos.
+Si lo necesitan, les enviamos más detalles técnicos.
+
+Muchas gracias,
+[nombre] · [cargo en la organización] · [teléfono de contacto]
+```
+
 ### El día anterior: el grupo de WhatsApp de ensayo (👤, 10 minutos)
 
 1. En WhatsApp, crea el grupo "Ensayo CIDEIC" con los 2 admin y los 4 operadores.
@@ -90,6 +155,7 @@ La página no vuelve a mostrar una confirmación: con solo un documento, cualqui
 | 0 | 👤 | Operación → **Abrir**. Cuenta regresiva en voz alta: los 10 escriben su documento **a la vez**. |
 | 0–10 min | 👥 | Cada voluntario completa su caso (tabla de arriba) y hace una captura del comprobante. |
 | 10–25 min | 👥 equipo | **Operadores 1 y 2:** las 3 solicitudes del grupo de ensayo, con el procedimiento 1: aprobar a los voluntarios 1 y 2, y rechazar al 9. **Operador 3:** con el procedimiento 2, reenviar la confirmación al voluntario 8 y no darle nada al voluntario 5. **Operador 4:** buscar a 3 voluntarios por documento y por celular; abrir la lista de una actividad, marcar a 2 como "en el grupo" y exportar el CSV. **Admin 1:** anular la inscripción del voluntario 3. **Admin 2:** agregar al padrón el documento del voluntario 10 (`99999999`, etapa 1); inscribirlo a mano en la actividad llena, con la ampliación y su llave; luego cambiarle una de sus actividades. Avísale: su comprobante cambia. |
+| 20–25 min | 👤 y 3 voluntarios en el Wi-Fi de la UCSM, mismo pabellón | **Freno por red** (las inscripciones siguen abiertas: si están cerradas, los documentos que no existen no cuentan).<br>1. Operación → Redes con intentos fallidos → Límites: **Red = 5** → Guardar.<br>2. Cada uno escribe 2 documentos que no existen (`11111111`, `22222222`). Si ya hubo fallos en esta ventana de 10 min, se frena antes.<br>3. El equipo ve "cerca del límite" y luego "frenada", en la tarjeta y en la franja.<br>4. Desde ese Wi-Fi, un documento válido da "demasiados intentos fallidos desde tu red"; con datos móviles, pasa.<br>5. Prueben las 2 salidas: **Liberar red** y, otra vez frenada, subir el límite. Al final: **Red = 300**. |
 | 25 min | 👤 | Operación → **Avisar y cerrar** con 2 minutos. Un voluntario intenta inscribirse durante el aviso y después del cierre. |
 | 30 min | 👤 | Sistema → **Respaldo**. 🤖 Claude Code lo verifica: `python supabase/restaurar.py <archivo> --verificar`, y `--solo-faltantes --simular` contra PRUEBA (no debería volver nada). |
 | 30–45 min | todos | Ronda de comentarios: qué confundió, qué tardó, qué faltó. Anótalo (plantilla abajo). |
@@ -106,6 +172,7 @@ Esto ensaya además el paso de la apertura (§19.7), con los archivos de prueba 
 4. Sistema → **Importar actividades** → `local/actividades_prueba.csv` (28 actividades).
 5. 🤖 Corre el tester contra PRUEBA: debe quedar en verde.
 6. 👤 En WhatsApp, elimina el grupo de ensayo, o saca a los voluntarios y restablece su enlace.
+7. 👤 Comprueba que el límite por red quedó en **300** (Operación → Redes con intentos fallidos → Límites).
 
 ### Qué anotar (para la conversación de diseño)
 
@@ -114,6 +181,7 @@ ENSAYO · 10/11/2026 · 10 voluntarios · equipo: 1 propietario, 2 admin, 4 oper
 Casos 1–10: <bien / qué pasó>
 Equipo: <qué hizo cada rol y si encontró todo>
 WhatsApp: <solicitudes de 1, 2 y 9 bien atendidas; minutos para reenviar la confirmación del 8; qué recibió el 5>
+Red UCSM: <tabla de la prueba previa; en el ensayo, si se frenó con 5, si el aviso se vio y si liberar o subir el límite lo resolvió>
 Tiempos: <cuánto tardó la gente de la pantalla 1 al comprobante>
 Confusiones: <textos, botones, pasos>
 Teléfonos: <modelos o navegadores con problemas>
@@ -139,9 +207,66 @@ Datos reales que vas a necesitar:
 
 Orden de la apertura (detallado en la guía del Sprint 6):
 
-1. 🤖 `config.js` pasa a apuntar a PRODUCCIÓN (sigue cerrada).
+1. 🤖 Migración 10 en PRODUCCIÓN (`instalar.py`, primero `--verificar`), si el ensayo salió bien. Deja el límite por red en 300. Luego `config.js` pasa a apuntar a PRODUCCIÓN (sigue cerrada).
 2. 👤 Tu cuenta de propietario en PRODUCCIÓN.
 3. 👤 Invitar al equipo en PRODUCCIÓN.
 4. 👤 Sistema → Respaldo → Importar padrón → Importar actividades. El informe dice qué filas no entraron y por qué: corriges el CSV y lo vuelves a importar (lo que ya entró no se duplica).
 5. 👤 Revisar actividades, cupos y enlaces → Respaldo → **Pasar a producción** → Respaldo.
 6. 🤖 Tester en modo lectura → congelamiento → 👤 **Abrir** a la hora anunciada.
+
+### Hora de apertura
+
+- **Fuera del horario de clases**, por ejemplo a las 20:00 de un día sin evaluaciones. Así nadie queda en desventaja por estar en clase o en laboratorio. Además, la gente se reparte entre su casa y sus datos móviles, en lugar de concentrarse en la IP de un pabellón.
+- Anúnciala con 24 horas de anticipación y recuérdala 1 hora antes. Ese día, el equipo debe estar disponible desde 30 minutos antes hasta 1 hora después.
+- **Por etapas, solo si hay una prioridad que respetar.** Por ejemplo, si la Etapa 1 tiene prioridad en las visitas, abre la Etapa 1 a las 20:00 y agrega la Etapa 2 a las 20:30, desde Operación → Etapas que pueden inscribirse. Agregar una etapa se puede con las inscripciones abiertas. Si no hay una prioridad que respetar, conviene una sola apertura: es más simple y más justa. La carga no lo exige, porque en las pruebas 1000 personas a la vez se inscribieron en unos 20 s.
+
+### Quién vigila qué durante la apertura
+
+| Quién | Qué vigila o hace |
+|---|---|
+| Propietario | Operación: abrir, cerrar, límites y "Liberar red". Decide ante cualquier señal del plan de contingencia |
+| Admin 1 | La franja de arriba, "Redes con intentos fallidos", llamadas y pico en 10 s, Incidencias e Integridad. Avisa al propietario |
+| Admin 2 | Inscripciones a mano, cambios y cupos (con su llave) |
+| Operadores 1 y 2 | Solicitudes para entrar a los grupos (procedimiento 1) |
+| Operadores 3 y 4 | El WhatsApp de contacto: dudas y confirmaciones perdidas (procedimiento 2). Como el número es el tuyo, vincúlalo en sus computadoras con WhatsApp Web (Dispositivos vinculados) solo durante la apertura, o pásales tú los casos |
+| Canal de avisos masivos | **Uno solo, anunciado de antemano** (por ejemplo, el canal o la comunidad de WhatsApp del CIDEIC y los delegados de cada ciclo), a cargo de una persona que no sea el propietario. La página también avisa sola: muestra "cerradas" y la cuenta regresiva de "Avisar y cerrar" |
+
+### Plan de contingencia
+
+| Señal | Qué significa | Qué hacer | Quién |
+|---|---|---|---|
+| Franja **"⚠ RED CERCA DEL LÍMITE"** (80 %) | Muchos documentos mal escritos o fuera del padrón desde una misma red. Casi seguro, un pabellón de la UCSM | Mirar la tarjeta. Si es una red de la UCSM, **subir el límite por red** (por ejemplo, de 300 a 500) antes de que se frene. Vale de inmediato | Admin 1 avisa · propietario sube |
+| Franja **"⛔ RED FRENADA"** | Esa red no puede verificar documentos hasta que termine su ventana; la tarjeta dice en cuántos minutos | **Liberar red** y subir el límite. Por el canal: "Si te sale *demasiados intentos fallidos desde tu red*, cambia a tus datos móviles" | Propietario · canal |
+| Franja **"⚠ SATURACIÓN SOSTENIDA"** | Más de 2000 llamadas por cada 10 s durante 30 s: mucha demanda, no un error | No cerrar por reflejo: la página pone a la gente "en la fila" y reintenta sola. Vigilar Incidencias, Integridad y que las inscripciones sigan subiendo. Si aparecen incidencias seguidas o se rompe la integridad: **Avisar y cerrar** (2 min) y seguir la fila "grupo afuera" | Admin 1 vigila · propietario decide |
+| Muchos "no carga" o "Sin conexión" por WhatsApp, pero **sin alarma** y con pocas llamadas en el panel | Las llamadas no llegan a Supabase: probablemente el Wi-Fi, el firewall o el portal de la UCSM | Probar desde un celular con datos móviles. Si así funciona, avisar por el canal "usa tus datos móviles" y llamar al contacto de TI. Si es general y dura más de 10 minutos, seguir la fila siguiente | Operadores 3 y 4 detectan · propietario decide |
+| **Un grupo grande quedó afuera** de forma injusta (una red frenada o caída en los primeros minutos) | Los cupos se llenaron sin ellos | **Avisar y cerrar** (o Cerrar ahora). Los inscritos conservan su lugar; quien estaba eligiendo vuelve al inicio. Arreglar la causa (liberar red, subir el límite, TI), anunciar la nueva hora con el texto de abajo y reabrir a esa hora. Si las visitas se llenaron mientras tanto, los admins pueden ampliar cupos con su llave | Propietario · admins · canal |
+| **Alguien no logra inscribirse** (un caso suelto, con captura del error) | Una falla individual | Un admin lo inscribe desde el panel: Participantes → Inscribir desde el panel. Antes, se comprueba su número (procedimiento 2, pasos 1 y 2) y se le pide que lea y acepte el aviso de privacidad en la página. Después se le envía su confirmación (procedimiento 2, pasos 4 y 5) | Operador recibe · admin inscribe |
+
+Reintentar después de un "Sin conexión" **no duplica** la inscripción. Mientras la persona no recargue, la página reenvía el mismo pedido (R-32), y si el primero ya había entrado, recibe su confirmación. Si recarga y vuelve a intentar, ve "Este documento ya está inscrito" y se le reenvía con el procedimiento 2. La base no permite dos inscripciones del mismo documento.
+
+**Aviso para el caso "grupo grande afuera"** (completa los corchetes):
+
+```
+📢 CIDEIC · Inscripciones: hubo un problema de conexión en [la red de la universidad / el pabellón X]
+y muchos no pudieron entrar. Para que sea justo, cerramos las inscripciones unos minutos.
+Reabrimos hoy a las [hh:mm], en el mismo enlace. Si ya te inscribiste, tu lugar está guardado:
+no tienes que hacer nada.
+```
+
+### Texto de difusión
+
+```
+📲 *Inscripciones CIDEIC · visitas técnicas y talleres*
+🗓️ Abren el [día] a las [hh:mm] en: https://abidancopa2-netizen.github.io/inscripciones-ciic-2026/
+
+• Ten a la mano tu DNI, carnet de extranjería o pasaporte.
+• Puedes usar el Wi-Fi de la universidad o tus datos móviles. Si la página no carga o te dice
+  "demasiados intentos fallidos desde tu red", cambia a tus datos móviles y vuelve a intentarlo.
+• Si ves "Sin conexión" o "Estás en la fila", no recargues: la página reintenta sola y no te
+  inscribe dos veces.
+• Al terminar, entra a tus grupos de WhatsApp o toma una captura: la confirmación se muestra
+  una sola vez.
+
+¿Dudas o perdiste tu confirmación? Escríbenos al WhatsApp +51 927 457 291, desde el número con
+el que te inscribiste.
+```

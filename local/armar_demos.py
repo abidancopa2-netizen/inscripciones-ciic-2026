@@ -32,6 +32,14 @@ def tema_en_linea(h):
         txt = (docs / m.group(1)).read_text(encoding='utf-8')
         txt = re.sub(r'url\("img/([\w.-]+\.webp)"\)', lambda u: 'url("' + img('tema/img/' + u.group(1)) + '")', txt)
         return '<style>\n' + txt + '</style>'
+    def fuente(m):                         # Sprint 5.1: la fuente vive en docs/tema/fuentes/ (la baja sprints/sprint-5.1/fuente.py)
+        ruta = docs / m.group(1)
+        if not ruta.exists():
+            print('  aviso: falta ' + m.group(1) + ' (corre python sprints/sprint-5.1/fuente.py): la demo usa la letra del sistema')
+            return ''
+        woff2 = lambda u: 'url(data:font/woff2;base64,' + base64.b64encode((ruta.parent / u.group(1)).read_bytes()).decode() + ')'
+        return '<style>\n' + re.sub(r'url\(([\w.-]+\.woff2)\)', woff2, ruta.read_text(encoding='utf-8')) + '</style>'
+    h = re.sub(r'<link rel="stylesheet" href="(tema/fuentes/[\w.-]+\.css)">\n?', fuente, h)
     h = re.sub(r'<link rel="stylesheet" href="(tema/[\w.-]+\.css)">', css, h)
     h = re.sub(r'<script src="(tema/[\w.-]+\.js)"></script>', lambda m: '<script>\n' + (docs / m.group(1)).read_text(encoding='utf-8') + '</script>', h)
     return re.sub(r'src="(tema/img/[\w.-]+\.webp)"', lambda m: 'src="' + img(m.group(1)) + '"', h)

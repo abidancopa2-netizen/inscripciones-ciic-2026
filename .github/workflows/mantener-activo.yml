@@ -1,5 +1,7 @@
 # Evita que Supabase pause el proyecto por inactividad (plan gratuito: 7 días con poca actividad)
-# y avisa por correo si la base no responde. Dos veces al día hace una consulta real (action "estado").
+# y avisa por correo si la base no responde. Cada hora hace una consulta real (action "estado").
+# Sprint 5.1: cada consulta, además, deja que la base borre los intentos fallidos de ventanas ya terminadas (IP e
+# identificador del navegador, R-25): aunque nadie use la página, no quedan más de una hora.
 # No usa acciones de terceros: lee config.js publicado en GitHub Pages y llama a la API con curl.
 # Si tu página no está en https://USUARIO.github.io/REPOSITORIO/, crea la variable de repositorio
 # CONFIG_URL (Settings → Secrets and variables → Actions → Variables) con la dirección de tu config.js.
@@ -7,7 +9,7 @@ name: Mantener Supabase activo
 
 on:
   schedule:
-    - cron: "17 3,15 * * *"   # 03:17 y 15:17 UTC (22:17 y 10:17 en Lima)
+    - cron: "17 * * * *"      # cada hora, a los 17 minutos
   workflow_dispatch:
 
 permissions: {}

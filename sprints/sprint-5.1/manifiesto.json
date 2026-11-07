@@ -1,0 +1,66 @@
+{
+ "sprint": "sprint-5.1",
+ "siguiente": "migración 10 solo en PRUEBA. En local: fuente.py, instalar.py, configurar.py (vista previa; huella del aviso 11590a4931c3; el propietario aprueba; --aplicar), tester con --web. Luego PRUEBA: instalar.py --verificar y sin --verificar, commit y push (con docs/tema/fuentes/), tester con --dsn, --web y --personas-w 300, y el tester de GitHub. Después, GUIA parte C.",
+ "archivos": {
+  "supabase/10_sprint5_redes.sql": {
+   "base": null,
+   "nuevo": "76ee81f79f07"
+  },
+  "supabase/instalar.py": {
+   "base": "c276c321a505",
+   "nuevo": "af28c0e3ea97"
+  },
+  "docs/index.html": {
+   "base": "50ce64900891",
+   "nuevo": "bcbdb67ce7ef"
+  },
+  "docs/panel.html": {
+   "base": "b3dec1bf086a",
+   "nuevo": "3c36ee6a34d8"
+  },
+  "docs/demo/demo-api.js": {
+   "base": "4dddb07b92ce",
+   "nuevo": "747805f4fc01"
+  },
+  "docs/demo/datos-demo.js": {
+   "base": "655a0585f817",
+   "nuevo": "6a887a966bc2"
+  },
+  "local/armar_demos.py": {
+   "base": "991d600deef8",
+   "nuevo": "a6eab5ef7261"
+  },
+  "local/generar_datos.py": {
+   "base": "206dcebd721e",
+   "nuevo": "e34c1d2cb0a0"
+  },
+  "tester/tester.py": {
+   "base": "a361826bcde4",
+   "nuevo": "013a5d638216"
+  },
+  ".github/workflows/mantener-activo.yml": {
+   "base": "1ed37c00c321",
+   "nuevo": "c21ea8c66c81"
+  },
+  "docs/LEEME-DISENO.md": {
+   "base": "9819cf63e8c0",
+   "nuevo": "6558cf8d7c52"
+  },
+  "CLAUDE.md": {
+   "base": "95ea59acac6b",
+   "nuevo": "7454afc08785"
+  },
+  "sprints/PLAN.md": {
+   "base": "f71d8ec6a992",
+   "nuevo": "e780fcfe7a2d"
+  },
+  "sprints/sprint-5/GUIA.md": {
+   "base": "67389cd27314",
+   "nuevo": "4bf48dcae80a"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "c886f3b6acdf",
+   "nuevo": "1df733fee18b"
+  }
+ }
+}

@@ -101,6 +101,20 @@ Guía paso a paso, con lo que haces tú y lo que hace Claude Code: `sprints/spri
 | 5.5 | Aviso de privacidad final, nombre del congreso y contacto en `config.js` (`sprints/sprint-5/configurar.py`) |
 | 5.6 | Del reporte del 4.1: rampa en Q. Desde una PC (no en GitHub ni en local), es aviso y no falla: el tiempo pasado solo por fallas de conexión del equipo, y hasta un 2 % de personas sin conexión tras 3 min de reintentos, sin ningún error de la base |
 
+## Sprint 5.1 · Correcciones antes del ensayo · entregado el 07/11
+
+Del reporte del Sprint 5 (local 364/364, GitHub 295/295, PRUEBA con el tema y el aviso) y de las decisiones del propietario.
+
+| # | Tarea |
+|---|---|
+| 5.1.1 | **Migración 10:** los intentos (IP e identificador del navegador) se borran al terminar su ventana de 10 min, con la consulta `estado` (de a una, con `SKIP LOCKED`), y "Mantener Supabase activo" corre cada hora. El aviso dice que se usan solo para el límite de 10 minutos y que después se borran |
+| 5.1.2 | **Redes con intentos fallidos** en Operación (admin y propietario): IP enmascarada, fallos, % del límite, minutos para reiniciar, estado; avisos en la franja al 80 % y al frenar; "Liberar red" del propietario, con bitácora; límites editables desde el panel. Límite por red: 300 |
+| 5.1.3 | Fuente Saira alojada en `docs/tema/fuentes/` (`sprints/sprint-5.1/fuente.py`): las páginas ya no llaman a Google |
+| 5.1.4 | Aviso corregido (IP, GitHub Pages, correo electrónico) con `sprints/sprint-5.1/configurar.py`; "correo electrónico" también en la página, el panel y la base |
+| 5.1.5 | Tester: bloque AL (redes y limpieza); desde una PC, T y W (sin conexión) y AE (tiempo en la base) son aviso; la página y el panel no llaman a Google y todos sus archivos cargan |
+| 5.1.6 | GUIA: prueba de la red de la UCSM, correo para TI, caso de freno por red en el ensayo, plan de contingencia, quién vigila qué, texto de difusión y hora de apertura |
+
 ## Apertura
 
-Respaldo → Sistema → Pasar a producción → respaldo → tester en modo lectura → empieza el congelamiento (doc §20.1).
+1. Migración 10 en PRODUCCIÓN (después del ensayo).
+2. Respaldo → Sistema → Pasar a producción → respaldo → tester en modo lectura → empieza el congelamiento (doc §20.1).

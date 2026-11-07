@@ -6,9 +6,7 @@
 <title>Inscripción · visitas técnicas y talleres</title>
 <link rel="stylesheet" href="base.css">
 <script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"claro":"oscuro";document.documentElement.setAttribute("data-tema",t)})();</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira:wdth,wght@75..125,300..800&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="tema/fuentes/saira.css">
 <link rel="stylesheet" href="tema/participante.css">
 <script src="config.js"></script>
 </head>
@@ -66,7 +64,7 @@
         <div><label for="nombres">Nombres</label><input id="nombres" autocomplete="given-name" maxlength="60" required></div>
         <div><label for="apellidos">Apellidos</label><input id="apellidos" autocomplete="family-name" maxlength="60" required></div>
       </div>
-      <label for="correo">Correo institucional</label>
+      <label for="correo">Correo electrónico</label>
       <input id="correo" type="email" autocomplete="email" maxlength="100" placeholder="nombre.apellido@universidad.edu.pe" required>
       <label for="celular">Celular con WhatsApp</label>
       <div class="fila">
@@ -291,7 +289,7 @@
     if (sel.length !== 2) return mensaje($('msg-2'), { tipo: 'combinacion_invalida', mensaje: 'Elige 2 actividades.' });
     if (datos.nombres.length < 2) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tus nombres.' });
     if (datos.apellidos.length < 2) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tus apellidos.' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.correo)) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tu correo institucional.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(datos.correo)) return mensaje($('msg-2'), { tipo: 'datos_invalidos', mensaje: 'Escribe tu correo electrónico.' });
     if (datos.pais === 'PE' ? !/^9\d{8}$/.test(cel.replace(/^51(?=9\d{8}$)/, '')) : !/^\d{6,14}$/.test(cel))
       return mensaje($('msg-2'), { tipo: 'celular_invalido', mensaje: datos.pais === 'PE' ? 'Revisa tu celular: en Perú son 9 dígitos y empiezan con 9.' : 'Revisa tu celular: entre 6 y 14 dígitos, sin el código de país.' });
     if (!$('acepta').checked) return mensaje($('msg-2'), { tipo: 'sin_consentimiento', mensaje: 'Para inscribirte necesitamos que aceptes el aviso de privacidad y el contacto por WhatsApp.' });
