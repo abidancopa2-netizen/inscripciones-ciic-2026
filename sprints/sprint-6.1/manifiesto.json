@@ -1,0 +1,46 @@
+{
+  "sprint": "sprint-6.1",
+  "siguiente": "Después de las migraciones 10 a 12 en PRODUCCIÓN: aplicar.py --verificar (7 archivos, sin conflictos), aplicar.py, instalar.py --verificar en local (Pendientes: ninguna y la línea Configuración), tester local con --web (390/390, 1 omitida), commit y push, tester de GitHub (306/306), y la línea Configuración de PRUEBA y PRODUCCIÓN con --verificar (PRODUCCIÓN solo con autorización). Luego el propietario prueba la recuperación de contraseña en PRUEBA y recién entonces invita al equipo. Sin SQL; config.js no cambia. Antes del congelamiento (10/11, 20:00).",
+  "archivos": {
+    "docs/panel.html": {
+      "base": "c6f9a329e284",
+      "nuevo": "2a09a9e1a6a3"
+    },
+    "tester/tester.py": {
+      "base": "901ef2068cc7",
+      "nuevo": "4853ea1c54f8"
+    },
+    "supabase/instalar.py": {
+      "base": "78c626e7af0c",
+      "nuevo": "9ffab702a577"
+    },
+    ".claude/skills/ciic-desarrollo/SKILL.md": {
+      "base": "aa62e7e37831",
+      "nuevo": "ad39c60c7141"
+    },
+    "sprints/sprint-6/GUIA.md": {
+      "base": "745701d21298",
+      "nuevo": "477c063b789a",
+      "incorpora": "versión anterior de esta entrega (8392108302d4)",
+      "locales": [
+        "8392108302d4"
+      ]
+    },
+    "sprints/PLAN.md": {
+      "base": "ce4f9f5bdb4b",
+      "nuevo": "7f9778179a14",
+      "incorpora": "versión anterior de esta entrega (4d30c18db6f9)",
+      "locales": [
+        "4d30c18db6f9"
+      ]
+    },
+    "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+      "base": "182c359608ac",
+      "nuevo": "80d87b966e5d",
+      "incorpora": "versión anterior de esta entrega (1c9caae7bcb0)",
+      "locales": [
+        "1c9caae7bcb0"
+      ]
+    }
+  }
+}

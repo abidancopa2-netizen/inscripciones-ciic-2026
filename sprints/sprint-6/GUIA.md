@@ -6,10 +6,12 @@
 
 | Qué | Cuándo |
 |---|---|
-| Ensayo con 10 personas (en PRUEBA) | Martes 10/11. Mejor en la mañana (por ejemplo, de 10:00 a 11:30): deja la tarde para corregir lo que encuentre antes del congelamiento |
+| Ensayo (en PRUEBA) | **Martes 10/11 de 10:00 a 11:30** (confirmado el 08/11). Participan un voluntario y parte del equipo. Deja la tarde para corregir lo que encuentre antes del congelamiento |
 | Apertura de la Etapa 1 (en PRODUCCIÓN) | **Miércoles 11/11 a las 20:00**, con el dominio propio o sin él |
 | Congreso | Del 16 al 21/11 (viicideic.space) |
-| Borrado de los datos (90 días) | A más tardar el viernes 19/02/2027 (doc §19.8) |
+| Después del congreso | Revocar la contraseña de aplicación de Gmail que usa el correo de Supabase (parte 1), si no se revocó antes · borrar los datos (90 días) a más tardar el viernes 19/02/2027 (doc §19.8) |
+
+> **Revisión del Sprint 6.1 (08/11):** correo de Supabase con una cuenta propia del propietario (parte 1), red de la UCSM ya probada (parte 3), sesiones al pasar a PRODUCCIÓN (parte 4, paso 5), contraseña o celular perdidos sin SQL (parte 4.2) y cronograma adelantado (parte 10).
 
 **Congelamiento** (doc §20.1 y la skill `sql-ciic-inscripciones`): desde 24 horas antes de abrir, es decir, **desde el martes 10/11 a las 20:00**, no se corre SQL en PRODUCCIÓN hasta el fin del congreso. Todo lo operativo se hace desde el panel. Este sprint lo respeta así:
 
@@ -21,21 +23,29 @@
 
 La carga de los datos reales desde el panel **no rompe el congelamiento**: §20.1 la pone entre lo que se hace sin SQL. Los ajustes del panel de Supabase (correo, URLs, invitaciones) tampoco son SQL, pero se dejan listos el 09/11.
 
-## 1 · Correos de Supabase: hazlo primero (👤, 09/11, 30 minutos)
+## 1 · Correos de Supabase (👤, hecho el 08/11 en los dos proyectos)
 
-**Sin este paso, las invitaciones al equipo no llegan.** Sin un servidor de correo propio, Supabase solo envía a los correos de los miembros de su organización (los demás reciben "Email address not authorized"), y como mucho 2 por hora. Hazlo en **PRUEBA** (para el equipo del ensayo) y en **PRODUCCIÓN**.
+**Sin este paso, las invitaciones al equipo no llegan.** Sin un servidor de correo propio, Supabase solo envía a los correos de los miembros de su organización (los demás reciben "Email address not authorized"), y como mucho 2 por hora. Va en **PRUEBA** (para el equipo del ensayo) y en **PRODUCCIÓN**.
 
-1. En la cuenta de Gmail **logisticacideic@gmail.com**: Cuenta de Google → Seguridad → activa la **verificación en 2 pasos**. Luego, en **Contraseñas de aplicaciones**, crea una llamada "Supabase CIDEIC". Gmail te da 16 letras: guárdalas en tu gestor de contraseñas. Nunca en el chat ni en el repositorio.
-2. Supabase (en cada proyecto) → Authentication → Emails → **SMTP Settings** → Enable custom SMTP. Llena:
-   - Sender email: `logisticacideic@gmail.com`
+**Cómo quedó (08/11):** la cuenta de logística no deja activar la verificación en 2 pasos, porque es compartida. Por eso el correo de los dos proyectos sale, por ahora, de **una cuenta Gmail personal del propietario**, con el nombre "VII CIDEIC". En PRUEBA se comprobó que llega bien.
+
+- **Quién recibe estos correos:** solo el equipo (invitaciones y recuperación de contraseña). Los participantes nunca reciben correos de Supabase. El equipo verá la dirección personal como remitente: avísales, y que revisen la carpeta Spam.
+- **Supabase muestra "Check your SMTP provider"** por usar Gmail. Se ignora: el volumen es muy bajo.
+- **El contacto ARCO del aviso de privacidad sigue siendo el de logística.** El aviso no cambia.
+
+Cómo se configuró, por si hay que repetirlo:
+
+1. En la cuenta de Gmail que envía: Cuenta de Google → Seguridad → **verificación en 2 pasos** activa. Luego, en **Contraseñas de aplicaciones**, una llamada "Supabase CIDEIC". Gmail da 16 letras: van en tu gestor de contraseñas. Nunca en el chat ni en el repositorio.
+2. Supabase (en cada proyecto) → Authentication → Emails → **SMTP Settings** → Enable custom SMTP:
+   - Sender email y Username: la dirección de esa cuenta Gmail
    - Sender name: `VII CIDEIC`
-   - Host: `smtp.gmail.com`
-   - Port: `465`
-   - Username: `logisticacideic@gmail.com`
+   - Host: `smtp.gmail.com` · Port: `465`
    - Password: las 16 letras
    - Guarda.
 3. Authentication → **Rate Limits** → "emails sent": **30 por hora**.
-4. Prueba: en el panel de ese proyecto, "¿Olvidaste tu contraseña?" con tu correo. El mensaje debe llegar desde logisticacideic@gmail.com.
+4. Prueba: en el panel de ese proyecto, "¿Olvidaste tu contraseña?" con tu correo. Debe llegar con el nombre "VII CIDEIC". Desde el Sprint 6.1, con tu autenticador activo, el enlace pide primero tu código de 6 dígitos y después la contraseña nueva.
+
+**Cuando Google libere la cuenta nueva solo para el envío:** en los dos proyectos, SMTP Settings → cambia Sender email, Username y Password → Save, y repite la prueba del paso 4. No es SQL: se puede hacer incluso durante el congelamiento. Después, **revoca la contraseña de aplicación "Supabase CIDEIC" de tu cuenta personal** (Cuenta de Google → Seguridad → Contraseñas de aplicaciones). Si el cambio no llega antes, revócala al terminar el congreso, y en ese momento quita el SMTP o pásalo a la cuenta de envío.
 
 **Plan B, si Gmail no deja:** Authentication → Users → Add user → **Create new user**, con el correo de la persona, una contraseña temporal y "Auto Confirm User". Dásela en persona, nunca por chat. Con ella entra al panel y registra su código. Sin correo propio no funciona "¿Olvidaste tu contraseña?", así que esa contraseña se queda hasta después del congreso.
 
@@ -58,7 +68,9 @@ En este orden:
 5. 🤖 Con tu autorización en esa sesión, y solo si la prueba de ataque salió en verde: **migraciones 10 a 12 en PRODUCCIÓN**. PRODUCCIÓN sigue cerrada, y `config.js` sigue en PRUEBA.
 6. 👤 Tu cuenta de propietario en PRODUCCIÓN (parte 4, paso 4, subpasos 1 y 2): la única sentencia SQL tuya en PRODUCCIÓN.
 
-Ese mismo día, 👤: el correo a TI, la prueba de red en el campus, el grupo de WhatsApp de ensayo y el equipo en PRUEBA (guía del Sprint 5, partes B y C).
+Ese mismo día, 👤: el grupo de WhatsApp del ensayo y el equipo en PRUEBA (guía del Sprint 5, partes B y C). Invita al equipo **después de aplicar el Sprint 6.1**, para que la recuperación de contraseña ya funcione con el autenticador.
+
+**Red de la UCSM:** se probó el 07/11. Desde el campus cargan la página de participantes y el panel (sin carga masiva). El correo a TI se descartó. Se mantiene el plan para el peor escenario: límite por red desde la tarjeta Redes y, en la difusión, "cambia a tus datos móviles" (parte 4.1, última fila).
 
 ## 4 · Fase 2 · martes 10/11, después del ensayo · `config.js` a PRODUCCIÓN y cuentas
 
@@ -80,6 +92,8 @@ Empieza cuando el ensayo terminó y PRUEBA quedó como estaba. Los pasos 1 a 3 c
       ```
    3. Después del paso 3 de esta parte (con el panel publicado ya en PRODUCCIÓN), entra con tu correo y esa contraseña. Registra el QR en tu autenticador como una entrada **nueva**, "CIDEIC PRODUCCIÓN", distinta de la de PRUEBA.
 5. 👤 **El equipo en PRODUCCIÓN** (10/11 por la tarde o la noche, o el 11/11 en la mañana): invita a los 6 (2 admin y 4 operadores) **después del paso 3**, porque el enlace de la invitación abre el panel publicado. Cada uno abre su enlace una vez, crea su contraseña y registra una entrada nueva "CIDEIC PRODUCCIÓN". Tú les asignas el rol en Sistema → Equipo, y cada uno comprueba que ve sus pestañas. Esto es desde el panel: se puede hacer durante el congelamiento.
+   - **Las cuentas de PRUEBA no pasan a PRODUCCIÓN:** son proyectos separados. Para cada persona son 4 cosas: tu invitación, su contraseña, su QR nuevo y el rol que le das. La invitación es lo único que tienes que mandar; lo demás lo hace ella al abrir el enlace, salvo el rol.
+   - **La sesión de PRUEBA guardada en su navegador no estorba:** supabase-js guarda la sesión con una clave distinta para cada proyecto, así que el panel publicado en PRODUCCIÓN no la ve y pide entrar de nuevo. El tester lo comprueba desde el Sprint 6.1. Si alguien ve algo raro, que pulse "Salir" o abra el panel en una ventana privada.
 
 ### 4.1 · Si el ensayo encuentra un problema
 
@@ -99,6 +113,22 @@ Anótalo en la bitácora de `INCIDENCIAS.md` y tráelo a la conversación de dis
 - **Si todo está en verde, o lo pendiente tiene camino en el panel:** se sigue con la hora de las 20:00.
 - **Si queda algo crítico sin resolver:** no pases a producción y no difundas. La apertura se corre al día siguiente a la misma hora, y lo anuncias por el mismo canal. Hasta la difusión, moverla cuesta poco.
 
+### 4.2 · Contraseña o celular perdidos (también durante el congelamiento)
+
+Regla: **todo cambio de contraseña pasa por el autenticador.** Tú solo intervienes en Supabase si alguien perdió el celular. Nada de esto es SQL, así que vale también durante el congelamiento. Hazlo en el proyecto donde está la cuenta (PRUEBA o PRODUCCIÓN: mira el nombre del proyecto, no la etiqueta "PRODUCTION" de la rama).
+
+| Qué pasó | Qué hace la persona | Qué haces tú |
+|---|---|---|
+| Olvidó la contraseña y tiene su celular | "¿Olvidaste tu contraseña?" → enlace del correo (revisar Spam) → **primero su código de 6 dígitos**, después la contraseña nueva (Sprint 6.1) | Nada |
+| Perdió el celular y sabe su contraseña | Te avisa | Supabase → Authentication → Users → la persona → **Danger zone → Remove MFA factors** → "Remove factors". Ella entra con correo y contraseña, y el panel le muestra un QR nuevo |
+| Perdió la contraseña y el celular | Te avisa | Remove MFA factors, como arriba. Luego, en la misma ficha, **Reset password → "Send password recovery"** (o ella usa "¿Olvidaste tu contraseña?"). Sin autenticador, el enlace va directo a "Crea tu contraseña" y después al QR nuevo |
+| El celular fue robado, o la cuenta pudo quedar expuesta | — | **Primero, Sistema → Equipo → Desactivar:** corta su acceso al panel en ese momento. Después, Remove MFA factors (Supabase avisa que quitar el factor **no cierra sus sesiones**: por eso va primero Desactivar). Cuando registró su QR nuevo, **Activar** |
+
+- **Antes de quitar un factor, confirma que es la persona:** en persona, o llamando a su número de siempre. Nunca solo por un mensaje.
+- **Su rol no se pierde:** está ligado a su cuenta, no al autenticador.
+- **Anota en la bitácora de `INCIDENCIAS.md`** quién, cuándo y qué hiciste.
+- **Si eres tú quien pierde el celular:** para todo lo anterior necesitas entrar a supabase.com, que tiene su propio inicio de sesión. Por eso, antes del 11/11, guarda fuera del celular la copia de seguridad del autenticador y los códigos de respaldo de Google, Supabase y GitHub.
+
 ## 5 · Fase 3 · miércoles 11/11 · datos reales, Pasar a producción y apertura
 
 ### 5.1 Carga (👤, mañana, 1 a 2 horas)
@@ -110,7 +140,7 @@ Los archivos están en tu carpeta, fuera del repositorio. No pasan por el chat. 
 3. Sistema → **Importar actividades**, con los enlaces de WhatsApp en la columna `enlace`. Lee el informe igual que el del padrón.
 4. **Revisión entre 2 personas:**
    - **Cada actividad:** nombre, tipo, fecha (16 a 21/11), horario, lugar, cupo, entrega, enlace y que esté visible.
-   - **En Operación:** inscriben **solo la Etapa 1** y la Etapa 1 puede elegir visitas; mismo día apagado y margen de 30 min (pestaña Actividades); límites 4 y 300 (tarjeta Redes).
+   - **En Operación:** inscriben **solo la Etapa 1** y la Etapa 1 puede elegir visitas; **"Permitir 2 talleres aunque queden visitas" encendido** (decisión del 08/11: las visitas son un privilegio, no una obligación); mismo día apagado y margen de 30 min (pestaña Actividades); límites 4 y 300 (tarjeta Redes). "Pasar a producción" no cambia nada de esto: solo borra los datos de prueba y pasa el modo.
    - **En Totales:** que el padrón de la Etapa 1 tenga la cifra esperada.
 5. *(Opcional, antes de difundir el enlace)* **Prueba de humo real:**
    1. Operación → Abrir.
@@ -221,6 +251,8 @@ Sin datos de personas reales: solo cifras.
 
 Para la apertura del 11/11 a las 20:00. La hora del ensayo es la recomendada: si cambia, corre la Fase 2 detrás de él.
 
+**Adelantado al fin de semana (07 y 08/11):** la Fase 1 en local (07/11, en verde); el correo propio, los ajustes de Auth y los datos de PRODUCCIÓN en `.env.local` (08/11, hechos); la Fase 1 en PRUEBA (08/11). Luego, el **Sprint 6.1** (panel), antes de invitar al equipo en PRUEBA. Lo que ya se hizo se salta en la tabla del lunes. La red de la UCSM ya se probó (07/11), y el correo a TI se descartó.
+
 **Lunes 09/11 · todo lo que se puede adelantar**
 
 | Hora | 👤 Tú | 🤖 Claude Code |
@@ -232,7 +264,7 @@ Para la apertura del 11/11 a las 20:00. La hora del ensayo es la recomendada: si
 | 12:30 | Autorizas PRODUCCIÓN | Migraciones 10 a 12 en PRODUCCIÓN y vista previa de `configurar.py` (15 min) |
 | 13:00 | Tu cuenta en PRODUCCIÓN y `asignar_propietario` (parte 4) | — |
 | 15:00 | Equipo en PRUEBA: invitaciones, códigos y roles (guía del Sprint 5, parte B) | — |
-| 16:00 | Prueba de la red en el campus, y el correo a TI si falta | — |
+| 16:00 | — (red del campus probada el 07/11; correo a TI descartado) | — |
 | 18:00 | Grupo de WhatsApp del ensayo, y la confirmación de las 10 personas | Reporte de la Fase 1 |
 
 **Martes 10/11 · ensayo y paso a PRODUCCIÓN**

@@ -26,6 +26,7 @@ padrón, actividades e inscripciones vacíos; los archivos de datos sueltos se e
 """
 import argparse
 import hashlib
+import json
 import re
 import sys
 import time
@@ -61,6 +62,22 @@ def limpieza(cur, local, pendiente=False):
         return (f'activa, {j[1]}' if j[0] else 'PAUSADA') + (f' · última corrida: {j[2]}' if j[2] else ' · todavía sin corridas') + extra
     except Exception as e:  # noqa: BLE001
         return f'no se pudo leer ({str(e).strip().splitlines()[0][:80]})'
+
+
+def configuracion(cur):
+    """Sprint 6.1 (#44): lo que no se ve sin SQL. De dónde sale la IP real y los límites de intentos, solo leyendo.
+    Con row_to_json no falla aunque a una versión vieja le falte alguna columna."""
+    cur.execute('select row_to_json(c) from public.config c where id = 1')
+    fila = cur.fetchone()
+    c = fila[0] if fila else None
+    if isinstance(c, str):
+        c = json.loads(c)
+    if not c:
+        return None, 'sin la fila de configuración'
+    ip = c.get('ip_cabecera')
+    return ip, (f"IP real desde {ip if ip and ip != 'auto' else 'auto (pendiente)'} · límite por red {c.get('limite_red', '?')} · "
+                f"por dispositivo {c.get('limite_dispositivo', '?')} · ventana {c.get('ventana_min', '?')} min · "
+                f"modo {c.get('modo', '?')} · {'ABIERTA' if c.get('abierto') else 'cerrada'}")
 
 
 def ref_del_dsn(dsn):
@@ -150,6 +167,11 @@ def main():
     print(f'Pendientes: {", ".join(p.name for p in pendientes) or "ninguna"}')
 
     if a.verificar:
+        if hay_config:
+            ip, texto = configuracion(cur)
+            print('Configuración: ' + texto)
+            if ip == 'auto':
+                print('  · Pendiente: IP real → fija config.ip_cabecera (GUIA, C5).')
         print('Limpieza programada de intentos: ' + limpieza(cur, local, any(p.name.startswith('12_') for p in pendientes)))
         con.rollback()
         print('Solo verificación: no se cambió nada.')
@@ -213,6 +235,7 @@ def main():
         print('  · Pendiente: clave del tester (solo PRUEBA) → select privado.crear_clave_admin(); y guárdala como ADMIN_KEY (GUIA, C3).')
     if ip == 'auto':
         print('  · Pendiente: IP real → fija config.ip_cabecera (GUIA, C5).')
+    print('  · Configuración: ' + configuracion(cur)[1])
     print('  · Limpieza programada de intentos: ' + limpieza(cur, local))
     con.close()
 

@@ -25,7 +25,7 @@ set -a; . ./.env.local; set +a        # secretos, sin mostrarlos (ver "Secretos"
 
 - Rutas: todo lo que generan las pruebas va en `resultados/`, que está en `.gitignore`. No uses `/tmp`: Git Bash lo traduce distinto para Python y para `psql`.
 - En Windows, el comando es `python`, no `python3`.
-- **Bitácora:** cada paso (comando, resultado en una línea, hora) va en la bitácora de `local-privado/INCIDENCIAS.md`. El reporte cita los números de entrada. `local-privado/` no se sube a GitHub: compruébalo con `git check-ignore -v local-privado/INCIDENCIAS.md`.
+- **Bitácora:** cada paso (comando, resultado en una línea, hora) va en la bitácora de `local-privado/INCIDENCIAS.md`. Las entradas de la bitácora no se numeran: el reporte las cita por fecha y hora. Las incidencias sí van con su número (#40, #41…). `local-privado/` no se sube a GitHub: compruébalo con `git check-ignore -v local-privado/INCIDENCIAS.md`.
 
 ## Procedimiento
 
@@ -86,7 +86,7 @@ Fallas:
   - <bloque> · <prueba> · esperado <x> · obtenido <y> · <detalle corto>
 Arreglos hechos aquí:
   - <archivo> · <qué y por qué, una línea>
-Bitácora: entradas #<desde>–#<hasta> de INCIDENCIAS.md
+Bitácora: INCIDENCIAS.md, entradas del <dd/mm hh:mm>–<hh:mm> · incidencias #<n> nuevas · #<n> cerradas
 Dudas para la conversación de diseño:
   - <una línea cada una>
 ```

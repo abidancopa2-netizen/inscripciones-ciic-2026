@@ -1764,14 +1764,22 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     $('sesion').textContent = 'Inicia sesión para continuar';
     mensaje($('msg-login'), r || null);
   }
-  let factor = null;
+  let factor = null, claveTras = false;      // claveTras (Sprint 6.1): enlace de recuperación con autenticador; tras el código, la contraseña nueva
+  async function factorVerificado() {
+    const { data } = await sb.auth.mfa.listFactors();
+    return (data && data.totp || []).find((f) => f.status === 'verified') || null;
+  }
   async function pedirCodigo() {
     pasoLogin('paso-codigo');
     if (!sb) return;
-    const { data } = await sb.auth.mfa.listFactors();
-    const ok = (data && data.totp || []).find((f) => f.status === 'verified');
-    if (ok) { factor = ok.id; $('alta-totp').hidden = true; $('t-codigo').textContent = 'Código de verificación'; }
-    else {
+    $('msg-codigo').textContent = '';
+    const ok = await factorVerificado();
+    if (ok) {
+      factor = ok.id; $('alta-totp').hidden = true;
+      $('t-codigo').textContent = claveTras ? 'Primero, tu código de verificación' : 'Código de verificación';
+      if (claveTras) mensaje($('msg-codigo'), { tipo: 'info', mensaje: 'Para crear tu contraseña nueva, escribe el código de 6 dígitos de tu app de verificación. Así nadie puede cambiarla solo con tu correo.' });
+    } else {
+      claveTras = false;
       const { data: alta, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
       if (error) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: error.message });
       factor = alta.id; $('qr').src = alta.totp.qr_code; $('secreto').textContent = alta.totp.secret;
@@ -1794,8 +1802,14 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     if (e1) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: e1.message });
     const { error } = await sb.auth.mfa.verify({ factorId: factor, challengeId: ch.id, code: $('codigo6').value.trim() });
     if (error) return mensaje($('msg-codigo'), { tipo: 'error', mensaje: 'Código incorrecto o vencido. Escribe el que muestra ahora tu app.' });
-    $('codigo6').value = ''; entrar();
+    $('codigo6').value = '';
+    if (claveTras) { claveTras = false; $('msg-codigo').textContent = ''; pasoLogin('paso-nueva'); return $('nueva-clave').focus(); }   // ya en aal2: ahora sí la contraseña
+    entrar();
   });
+  async function pasoNueva() {      // enlace de invitación o de recuperación (Sprint 6.1): con autenticador, primero el código (aal2)
+    if (await factorVerificado()) { claveTras = true; return pedirCodigo(); }
+    pasoLogin('paso-nueva'); $('nueva-clave').focus();
+  }
   $('btn-olvide').addEventListener('click', async () => {
     const correo = $('correo').value.trim();
     if (!correo) return mensaje($('msg-login'), { tipo: 'datos_invalidos', mensaje: 'Escribe tu correo arriba y vuelve a pulsar.' });
@@ -1807,8 +1821,12 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     const c = $('nueva-clave').value;
     if (c.length < 12) return mensaje($('msg-nueva'), { tipo: 'datos_invalidos', mensaje: 'Usa 12 caracteres o más.' });
     const { error } = await sb.auth.updateUser({ password: c });
+    if (error && /aal2/i.test(error.message || '')) { claveTras = true; return pedirCodigo(); }   // por si no se vio el factor: primero el código
     if (error) return mensaje($('msg-nueva'), { tipo: 'error', mensaje: error.message });
-    history.replaceState(null, '', location.pathname); pedirCodigo();
+    history.replaceState(null, '', location.pathname); $('nueva-clave').value = '';
+    const { data: n } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (n && n.currentLevel === 'aal2') { await entrar(); if (datos) aviso({ ok: true, tipo: 'panel', mensaje: 'Contraseña guardada.' }); return; }   // recuperación: ya dio el código
+    pedirCodigo();      // invitación: ahora registra su app de verificación
   });
   $('modo-prueba').addEventListener('click', () => { const f = $('form-prueba'); f.hidden = !f.hidden; $('modo-prueba').setAttribute('aria-expanded', String(!f.hidden)); });
   $('form-prueba').addEventListener('submit', (ev) => { ev.preventDefault(); prueba = { clave: $('clave-prueba').value.trim(), rol: $('como-rol').value }; entrar(); });
@@ -2423,7 +2441,7 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     try { await cargarScript(CFG.SUPABASE_JS || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'); } catch (e) { return; }   // sin supabase-js queda la clave de prueba
     sb = window.supabase.createClient(API, ANON, { auth: { persistSession: true, detectSessionInUrl: true } });
     const { data } = await sb.auth.getSession();
-    if (flujoClave && data.session) return pasoLogin('paso-nueva');
+    if (flujoClave && data.session) return pasoNueva();
     if (data.session) return entrar();
     if (errorEnlace) mensaje($('msg-login'), { tipo: 'enlace_usado', mensaje: errorEnlace === 'otp_expired'
       ? 'El enlace del correo ya se usó o venció: sirve una sola vez. Entra con tu correo y tu contraseña. Si todavía no creaste tu contraseña, pide al propietario que te invite de nuevo.'

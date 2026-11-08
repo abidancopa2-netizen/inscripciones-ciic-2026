@@ -1833,29 +1833,41 @@ class Tester:
             nav.close()
 
     SUPABASE_FALSO = """(() => {
-  const UID = '__UID__', K = 'ciic-falso-sesion';
-  const leer = () => { try { return JSON.parse(localStorage.getItem(K)); } catch (e) { return null; } };
-  const poner = (s) => { if (s) localStorage.setItem(K, JSON.stringify(s)); else localStorage.removeItem(K); };
+  const UID = '__UID__', F = 'ciic-falso-factor', R = 'ciic-falso-registro';
   window.supabase = { createClient(url, key, o) {
-    // Como supabase-js 2.45: si la URL trae un error (#error=…) y detectSessionInUrl, descarta la sesión guardada.
-    if (o && o.auth && o.auth.detectSessionInUrl && /error/.test(location.hash + location.search)) poner(null);
+    // Como supabase-js 2.45.4: la sesión se guarda con una clave por proyecto, sb-<ref>-auth-token (salvo un storageKey propio).
+    const K = (o && o.auth && o.auth.storageKey) || 'sb-' + new URL(url).hostname.split('.')[0] + '-auth-token';
+    const leer = () => { try { return JSON.parse(localStorage.getItem(K)); } catch (e) { return null; } };
+    const poner = (s) => { if (s) localStorage.setItem(K, JSON.stringify(s)); else localStorage.removeItem(K); };
+    const anotar = (t) => localStorage.setItem(R, (localStorage.getItem(R) || '') + t + ';');
+    const nivel = () => { const s = leer(); return s ? String(s.access_token).split(':')[2] || 'aal1' : null; };
+    const conFactor = () => localStorage.getItem(F) !== 'ninguno';
+    const url_ = o && o.auth && o.auth.detectSessionInUrl;
+    // Como supabase-js 2.45: con #error=… descarta la sesión guardada; con un enlace de invitación o recuperación abre una sesión aal1 y limpia la URL.
+    if (url_ && /error/.test(location.hash + location.search)) poner(null);
+    else if (url_ && /type=(recovery|invite)/.test(location.hash)) { poner({ access_token: 'local:' + UID + ':aal1' }); history.replaceState(null, '', location.pathname); }
     return { auth: {
       async getSession() { return { data: { session: leer() } }; },
       async signInWithPassword() { poner({ access_token: 'local:' + UID + ':aal1' }); return { data: {}, error: null }; },
       async signOut() { poner(null); return {}; },
       async resetPasswordForEmail() { return {}; },
-      async updateUser() { return { error: null }; },
+      async updateUser() {      // Como Supabase Auth: con un factor verificado, cambiar la contraseña exige aal2
+        if (conFactor() && nivel() !== 'aal2') { anotar('clave:rechazada'); return { data: null, error: { message: 'AAL2 session is required to update email or password when MFA is enabled.' } }; }
+        anotar('clave:' + nivel()); return { data: {}, error: null };
+      },
       mfa: {
-        async listFactors() { return { data: { totp: [{ id: 'f1', status: 'verified' }] } }; },
-        async enroll() { return { data: null, error: { message: 'sin alta' } }; },
-        async challenge() { return { data: { id: 'c1' }, error: null }; },
+        async listFactors() { return { data: { totp: conFactor() ? [{ id: 'f1', status: 'verified' }] : [] } }; },
+        async enroll() { anotar('alta'); return { data: { id: 'f2', totp: { qr_code: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', secret: 'FALSO' } }, error: null }; },
+        async challenge() { anotar('codigo'); return { data: { id: 'c1' }, error: null }; },
         async verify() { poner({ access_token: 'local:' + UID + ':aal2' }); return { error: null }; },
+        async getAuthenticatorAssuranceLevel() { const n = nivel(); return { data: { currentLevel: n, nextLevel: conFactor() ? 'aal2' : n }, error: null }; },
       } } };
   } };
 })();"""
 
     def p_inicio_sesion(self, nav, web):
-        """Inicio de sesión del panel con Supabase Auth simulado (sin cuentas reales): el aviso de 'sin rol' y el #error de un enlace usado."""
+        """Inicio de sesión del panel con Supabase Auth simulado (sin cuentas reales): el aviso de 'sin rol', el #error de un enlace usado,
+        y (Sprint 6.1) la recuperación de contraseña con autenticador, la invitación y la sesión guardada de otro proyecto."""
         if not (self.a.local and self.a.dsn):
             self.omitir('Panel: inicio de sesión con una cuenta sin rol (Auth simulado)', 'solo en local con --local y --dsn')
             return
@@ -1872,6 +1884,13 @@ class Tester:
         ctx.route('https://supabase.prueba.invalid/**', lambda r: r.fulfill(status=200, content_type='application/javascript', body=self.SUPABASE_FALSO.replace('__UID__', uid)))
         pp = ctx.new_page()
         visible = lambda tipo: pp.wait_for_selector(f'#msg-login [data-tipo="{tipo}"]', state='visible', timeout=15000)
+        limpiar = "Object.keys(localStorage).filter((k) => /^sb-|^ciic-falso/.test(k)).forEach((k) => localStorage.removeItem(k))"
+        registro = lambda: pp.evaluate("localStorage.getItem('ciic-falso-registro') || ''")
+
+        def abrir(sufijo, antes=''):
+            pp.evaluate(limpiar + (';' + antes if antes else ''))
+            pp.goto('about:blank')
+            pp.goto(web + 'panel.html' + sufijo)
         try:
             pp.goto(web + 'panel.html')
             pp.fill('#correo', 'sin.rol@ejemplo.com')
@@ -1886,11 +1905,45 @@ class Tester:
             pp.goto(web + 'panel.html#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired')
             visible('sin_permiso')
             self.ok('Panel: con #error en la URL y la sesión guardada, no la pierde y limpia la URL', pp.evaluate('location.hash') == '', 'sin #error', pp.evaluate('location.hash'))
-            pp.evaluate("localStorage.removeItem('ciic-falso-sesion')")
-            pp.goto('about:blank')
-            pp.goto(web + 'panel.html#error=access_denied&error_code=otp_expired')
+            abrir('#error=access_denied&error_code=otp_expired')
             visible('enlace_usado')
             self.ok('Panel: el enlace de invitación ya usado explica que se entra con correo y contraseña', 'una sola vez' in pp.inner_text('#msg-login'), 'una sola vez', pp.inner_text('#msg-login')[:80])
+            # Sprint 6.1 · recuperar la contraseña con el autenticador activo: Supabase exige aal2, así que primero el código y después la contraseña
+            abrir('#access_token=falso&type=recovery')
+            pp.wait_for_selector('#paso-codigo:not([hidden]), #paso-nueva:not([hidden])', timeout=15000)
+            primero = pp.is_visible('#paso-codigo') and pp.is_hidden('#paso-nueva') and 'Primero' in pp.inner_text('#t-codigo')
+            if primero:
+                pp.fill('#codigo6', '123456')
+                pp.click('#btn-codigo')
+                pp.wait_for_selector('#paso-nueva:not([hidden])', timeout=15000)
+                pp.fill('#nueva-clave', 'una-clave-nueva-de-prueba')
+                pp.click('#btn-guardar-clave')
+                visible('sin_permiso')
+            else:                       # como en el Sprint 6: la contraseña directo, y Supabase la rechaza ("AAL2 session is required…")
+                pp.fill('#nueva-clave', 'una-clave-nueva-de-prueba')
+                pp.click('#btn-guardar-clave')
+                pp.wait_for_timeout(1500)
+            reg = registro()
+            self.ok('Panel: recuperar la contraseña con autenticador pide primero el código y después la contraseña (Sprint 6.1)',
+                    primero and 'clave:aal2' in reg and 'rechazada' not in reg and reg.count('codigo') == 1,
+                    'código → contraseña con aal2 → entra sin pedir el código otra vez',
+                    f"primero={primero} · {reg} · {pp.inner_text('#msg-nueva').strip()[:70]}")
+            # La invitación (cuenta sin autenticador) sigue como antes: contraseña y después el QR
+            abrir('#access_token=falso&type=invite', "localStorage.setItem('ciic-falso-factor', 'ninguno')")
+            pp.wait_for_selector('#paso-nueva:not([hidden])', timeout=15000)
+            pp.fill('#nueva-clave', 'una-clave-nueva-de-prueba')
+            pp.click('#btn-guardar-clave')
+            pp.wait_for_selector('#alta-totp:not([hidden])', timeout=15000)
+            reg = registro()
+            self.ok('Panel: la invitación crea la contraseña y después muestra el QR del autenticador (como antes)', 'clave:aal1' in reg and 'alta' in reg and 'codigo' not in reg,
+                    'contraseña → QR', reg)
+            # Al pasar config.js a PRODUCCIÓN: la sesión que quedó guardada de PRUEBA es de otro proyecto y no se usa
+            abrir('', "localStorage.setItem('sb-proyectoprueba-auth-token', JSON.stringify({ access_token: 'local:%s:aal2' }))" % uid)
+            pp.wait_for_function('!!window.supabase', timeout=15000)
+            pp.wait_for_timeout(2500)
+            msg = pp.inner_text('#msg-login').strip()
+            self.ok('Panel: con la sesión guardada de otro proyecto (PRUEBA), pide entrar de nuevo al pasar a PRODUCCIÓN',
+                    pp.is_visible('#paso-clave') and pp.is_hidden('#vista-app') and not msg, 'pide correo y contraseña, sin usar esa sesión', msg[:80] or 'entró')
         except Exception as e:  # noqa: BLE001
             self.ok('Panel: inicio de sesión simulado sin errores', False, 'sin errores', str(e)[:200])
         finally:

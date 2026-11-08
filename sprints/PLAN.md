@@ -127,8 +127,20 @@ Fechas: ensayo el 10/11; apertura de la Etapa 1 el miércoles 11/11 (hora del pr
 | 6.5 | Fase 2 (10/11, después del ensayo): `sprints/sprint-6/configurar.py` → `config.js` a PRODUCCIÓN; tester en lectura comprueba con el tráfico real que la página y el panel publicados llaman a PRODUCCIÓN; el propietario registra su código y el equipo entra por invitación (desde el panel, aun en el congelamiento) |
 | 6.6 | Fase 3 (11/11): padrón, actividades y enlaces desde el panel; revisión; respaldo → Pasar a producción → respaldo → tester en lectura → congelamiento → abrir |
 | 6.7 | Opcional: dominio `inscripciones.viicideic.space`, solo si queda listo antes del 10/11 a las 12:00; si no, github.io |
-| 6.8 | Congelamiento: todo el SQL de PRODUCCIÓN el 09/11; desde el 10/11 a las 20:00, solo el panel. Problemas del ensayo: tabla de la GUIA (parte 4.1) y decisión de seguir o no el 11/11 a las 12:00 |
+| 6.8 | Congelamiento: todo el SQL de PRODUCCIÓN el 09/11; desde el 10/11 a las 20:00, solo el panel. Problemas del ensayo: tabla de la GUIA (parte 4.1) y decisión de seguir o no el 11/11 a las 11:30 |
 | 6.9 | Skill `ciic-desarrollo` al día para Windows (variables de PostgreSQL y Python, rutas en `resultados/`, `--personas-w 300` desde la PC, bitácora en `INCIDENCIAS.md`) |
+
+## Sprint 6.1 · Recuperar la contraseña con el autenticador · entregado el 08/11
+
+Panel, tester, `instalar.py` (solo lo que muestra) y textos: no cambia la base (sigue en `5.5-s6`) ni `config.js`. Va después de la Fase 1 de PRUEBA y de las migraciones en PRODUCCIÓN, y antes de invitar al equipo en PRUEBA; todo antes del congelamiento.
+
+| # | Tarea |
+|---|---|
+| 6.1.1 | Panel: con el autenticador activo, el enlace de "¿Olvidaste tu contraseña?" pide primero el código de 6 dígitos (nivel `aal2`) y después la contraseña nueva. Antes daba "AAL2 session is required…". La invitación (sin autenticador) sigue igual |
+| 6.1.2 | Tester: el Auth simulado ahora exige `aal2` para cambiar la contraseña con factor y guarda la sesión por proyecto, como Supabase. 3 pruebas nuevas: recuperación con autenticador, invitación, y la sesión de PRUEBA que no se usa al pasar a PRODUCCIÓN (390 en local) |
+| 6.1.3 | GUIA: correo de Supabase con la cuenta propia del propietario y cómo cambiarla; contraseña o celular perdidos sin SQL ("Remove MFA factors", parte 4.2); red de la UCSM probada y correo a TI descartado; cronograma adelantado. Doc revisión 13 |
+| 6.1.4 | `instalar.py` (#44): `--verificar` y el final de la instalación muestran la IP real y los límites (por red, por dispositivo, ventana), modo y si está abierta. Antes no había cómo leerlos en PRODUCCIÓN sin SQL |
+| 6.1.5 | Skill `ciic-desarrollo`: la bitácora se cita por fecha y hora (no se numera); las incidencias, por su número. GUIA 5.1 y doc §24: "Permitir 2 talleres aunque queden visitas" encendido en PRODUCCIÓN (08/11) |
 
 ## Apertura
 
