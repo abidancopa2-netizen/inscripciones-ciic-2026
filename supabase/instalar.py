@@ -34,7 +34,33 @@ from pathlib import Path
 import psycopg2
 
 RAIZ = Path(__file__).resolve().parent.parent
-POR_VERSION = {'5.1': 2, '5.5-s1': 3, '5.5-s2': 4, '5.5-s3': 5, '5.5-s3.1': 6, '5.5-s3.2': 7, '5.5-s4': 8, '5.5-s4.1': 9, '5.5-s5.1': 10}     # versión → hasta qué migración tenía aplicada (bases sin registro)
+POR_VERSION = {'5.1': 2, '5.5-s1': 3, '5.5-s2': 4, '5.5-s3': 5, '5.5-s3.1': 6, '5.5-s3.2': 7, '5.5-s4': 8, '5.5-s4.1': 9, '5.5-s5.1': 10, '5.5-s6': 12}     # versión → hasta qué migración tenía aplicada (bases sin registro)
+
+
+def limpieza(cur, local, pendiente=False):
+    """Sprint 6 · migración 12: si la base borra sola los intentos (pg_cron), su última corrida y cuántos quedan viejos. Solo lee."""
+    if pendiente:
+        return 'pendiente (migración 12)'
+    try:
+        cur.execute("select to_regclass('cron.job') is not null, to_regprocedure('privado.ventana()') is not null")
+        hay_cron, hay_ventana = cur.fetchone()
+        extra = ''
+        if hay_ventana:
+            cur.execute("select count(*) from public.intentos where ventana < privado.ventana() - interval '10 minutes'")
+            extra = f' · intentos terminados hace más de 10 min: {cur.fetchone()[0]}'
+        if not hay_cron:
+            return ('esta base no tiene pg_cron (normal en local); la hacen estado y "Mantener activo"' if local
+                    else 'pg_cron NO está activo: la limpieza sigue con estado y "Mantener activo" (anótalo en el reporte)') + extra
+        cur.execute("""select j.active, j.schedule,
+                              (select d.status || ' hace ' || round(extract(epoch from now() - d.start_time) / 60) || ' min'
+                                 from cron.job_run_details d where d.jobid = j.jobid order by d.start_time desc limit 1)
+                         from cron.job j where j.jobname = 'ciic-limpiar-intentos'""")
+        j = cur.fetchone()
+        if not j:
+            return 'NO programada (pg_cron está, pero el trabajo no): anótalo en el reporte' + extra
+        return (f'activa, {j[1]}' if j[0] else 'PAUSADA') + (f' · última corrida: {j[2]}' if j[2] else ' · todavía sin corridas') + extra
+    except Exception as e:  # noqa: BLE001
+        return f'no se pudo leer ({str(e).strip().splitlines()[0][:80]})'
 
 
 def ref_del_dsn(dsn):
@@ -124,6 +150,7 @@ def main():
     print(f'Pendientes: {", ".join(p.name for p in pendientes) or "ninguna"}')
 
     if a.verificar:
+        print('Limpieza programada de intentos: ' + limpieza(cur, local, any(p.name.startswith('12_') for p in pendientes)))
         con.rollback()
         print('Solo verificación: no se cambió nada.')
         return
@@ -146,6 +173,9 @@ def main():
             for p in pendientes:
                 cur.execute("insert into privado.migraciones (nombre, huella, forma) values (%s, %s, 'aplicada')", (p.name, huella(p.read_text(encoding='utf-8'))))
             con.commit()
+            for n in getattr(con, 'notices', []):       # los avisos de la migración 12 (pg_cron), si los hubo
+                if 'cron' in n.lower() or 'limpieza' in n.lower():
+                    print('  ' + n.strip())
         except psycopg2.Error as e:
             con.rollback()
             print(f'  ✘ {actual}: {str(e).strip().splitlines()[0]}')
@@ -183,6 +213,7 @@ def main():
         print('  · Pendiente: clave del tester (solo PRUEBA) → select privado.crear_clave_admin(); y guárdala como ADMIN_KEY (GUIA, C3).')
     if ip == 'auto':
         print('  · Pendiente: IP real → fija config.ip_cabecera (GUIA, C5).')
+    print('  · Limpieza programada de intentos: ' + limpieza(cur, local))
     con.close()
 
 

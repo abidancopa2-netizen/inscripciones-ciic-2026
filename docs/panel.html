@@ -312,7 +312,7 @@
 <div class="avisos" id="avisos" aria-live="polite"></div>
 <dialog id="modal" aria-labelledby="m-tit">
   <h3 id="m-tit"></h3>
-  <p id="m-txt"></p>
+  <p id="m-txt" style="white-space:pre-line"></p>
   <label id="m-caja" hidden><span id="m-lbl"></span><input id="m-entrada" autocomplete="off"></label>
   <div class="botones" style="margin-top:12px"><button class="boton secundario" id="m-cancelar" type="button">Cancelar</button><button class="boton" id="m-ok" type="button"></button></div>
 </dialog>
@@ -320,6 +320,10 @@
 <script>
 (() => {
   'use strict';
+  // Sprint 6 · El panel no se deja enmarcar desde otro sitio (clickjacking): GitHub Pages no permite enviar la cabecera que lo prohíbe.
+  let enmarcado = false;
+  try { enmarcado = window.top !== window.self && window.top.location.origin !== window.location.origin; } catch (e) { enmarcado = true; }
+  if (enmarcado) { document.documentElement.textContent = ''; return; }
   const CFG = window.CIIC_CONFIG || {};
   const DEMO = String(CFG.MODO || '').toLowerCase() === 'demo';
   const API = String(CFG.API_URL || '').trim().replace(/\/+$/, '');
@@ -666,6 +670,25 @@
   $('btn-paso').addEventListener('click', () => cfg({ pasoCupo: $('paso').value }));
 
   // Buscar, cambiar, anular
+  // Sprint 6 · Procedimiento 2 (confirmación perdida): arma el mensaje con sus actividades y grupos, para pegarlo en WhatsApp
+  function textoMensaje(i) {
+    const lineas = ['Hola, ' + (i.nombres || i.nombre || '') + '. Tu inscripción en ' + (CFG.NOMBRE_EVENTO || 'el congreso') + ' está confirmada. Tus actividades:', ''];
+    i.actividades.forEach((x, k) => {
+      const a = (datos && datos.actividades || []).find((y) => y.id === x.id) || { nombre: x.nombre || x.id };
+      lineas.push((k + 1) + ') ' + a.nombre + (a.fecha ? ' · ' + a.fecha + ', de ' + a.inicio + ' a ' + a.fin : '') + (a.lugar ? ' · ' + a.lugar : ''));
+      lineas.push(a.grupoModo === 'MANUAL' ? '   Te agregaremos al grupo de WhatsApp con tu número ' + i.celular + '.'
+        : a.grupo ? '   Grupo de WhatsApp: ' + a.grupo + ' (al pedir entrar, un administrador te aprobará)' : '   Aún no hay grupo: te escribiremos por WhatsApp.');
+    });
+    lineas.push('', 'Guarda este mensaje.');
+    return lineas.join('\n');
+  }
+  async function copiarMensaje(i) {
+    if (!(await preguntar({ titulo: 'Antes de copiar', ok: 'Coinciden: copiar',
+      texto: '¿Te escribe desde el ' + i.celular + ' y te dio el documento ' + i.doc + '? Si algo no coincide, no le envíes nada (procedimiento 2 de la guía).' }))) return;
+    const t = textoMensaje(i);
+    try { await navigator.clipboard.writeText(t); aviso({ ok: true, tipo: 'panel' }, 'Mensaje copiado: pégalo en el chat de WhatsApp de esa persona.'); }
+    catch (e) { preguntar({ titulo: 'Copia este mensaje', texto: t, ok: 'Listo' }); }
+  }
   async function buscar() {
     const r = await api('panel_buscar', { q: $('q').value });
     const caja = $('res-buscar'); caja.textContent = '';
@@ -677,6 +700,7 @@
       d.appendChild(el('b', {}, i.codigo + ' · ' + i.apellidos + ', ' + i.nombres));
       d.appendChild(el('small', { style: 'display:block' }, i.doc + ' · ' + i.celular + ' · ' + i.correo + ' · Etapa ' + i.etapa + ' · ' + i.origen + ' · ' + i.actividades.map((a) => a.id).join(' + ')));
       d.appendChild(el('span', { class: 'estado', 'data-v': i.estado }, i.estado));
+      if (i.estado === 'CONFIRMADO') d.appendChild(boton('Copiar mensaje', { style: 'margin-left:8px', 'data-copiar': i.codigo }, () => copiarMensaje(i)));
       if (i.estado === 'CONFIRMADO' && RANGO[rol] >= 2) {
         const b = el('div', { class: 'botones', style: 'margin-top:8px' });
         const s1 = el('select', { 'aria-label': 'Nueva actividad 1' }); s1.appendChild(opciones(false)); s1.value = i.actividades[0] && i.actividades[0].id;
@@ -801,8 +825,14 @@
   }
   $('btn-nueva').addEventListener('click', () => abrirForm(null));
   $('btn-cancelar-act').addEventListener('click', () => { $('form-act').hidden = true; editando = null; });
+  let guardandoAct = false;      // Sprint 6: un doble toque en "Guardar" creaba dos actividades
   $('form-act').addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    if (guardandoAct) return;
+    guardandoAct = true; $('btn-guardar-act').disabled = true;
+    try { await guardarActividad(); } finally { guardandoAct = false; $('btn-guardar-act').disabled = false; }
+  });
+  async function guardarActividad() {
     const p = { tipo: $('f-tipo').value, nombre: $('f-nombre').value, lugar: $('f-lugar').value, fecha: $('f-fecha').value, inicio: $('f-inicio').value,
                 fin: $('f-fin').value, descripcion: $('f-desc').value, grupoModo: $('f-modo').value, grupo: $('f-grupo').value };
     if (editando) p.id = editando; else p.cupo = $('f-cupo').value;
@@ -811,7 +841,7 @@
     aviso(r, (editando ? editando + ' actualizada.' : r.actividad.id + ' creada y oculta: muéstrala desde Operación.') +
              (r.cruces && r.cruces.length ? ' Se cruza con ' + r.cruces.join(', ') + ' (solo importa si combinas el mismo día).' : ''));
     $('form-act').hidden = true; editando = null; refrescar();
-  });
+  }
 
   // ── Listas por actividad (nivel 1) ──
   let ultimaLista = null, nLista = 0;
@@ -1074,6 +1104,7 @@
       return;
     }
     if (!/^https?:\/\//.test(API) || !ANON || /PEGA_AQUI/.test(API + ANON)) return mensaje($('msg-login'), { tipo: 'config', mensaje: 'Falta configurar el sistema: pega API_URL y ANON_KEY en config.js, o usa MODO: "demo".' });
+    if (CFG.PANEL_PRUEBA === false) $('paso-prueba').hidden = true;   // Sprint 6: config.js de PRODUCCIÓN (ahí no existe la clave del tester)
     api('estado').then((e) => { if (e && e.modo === 'PRODUCCION') $('paso-prueba').hidden = true; });   // R-37: ya no hay clave de prueba
     try { await cargarScript(CFG.SUPABASE_JS || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'); } catch (e) { return; }   // sin supabase-js queda la clave de prueba
     sb = window.supabase.createClient(API, ANON, { auth: { persistSession: true, detectSessionInUrl: true } });

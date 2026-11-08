@@ -48,7 +48,7 @@ jobs:
           FALLAS=0
           # 1 · El proyecto de la página publicada (docs/config.js)
           URL="${CONFIG_URL:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/config.js}"
-          if CFG=$(curl -sS --fail -m 20 "$URL"); then
+          if CFG=$(curl -sSL --fail -m 20 "$URL"); then          # -L: con un dominio propio, github.io redirige (Sprint 6)
             API=$(printf '%s' "$CFG" | sed -n "s/.*API_URL:[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" | head -1)
             KEY=$(printf '%s' "$CFG" | sed -n "s/.*ANON_KEY:[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/p" | head -1)
             if [ -z "$API" ] || [ -z "$KEY" ] || printf '%s' "$API$KEY" | grep -q PEGA_AQUI; then

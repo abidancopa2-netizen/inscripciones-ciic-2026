@@ -114,7 +114,23 @@ Del reporte del Sprint 5 (local 364/364, GitHub 295/295, PRUEBA con el tema y el
 | 5.1.5 | Tester: bloque AL (redes y limpieza); desde una PC, T y W (sin conexión) y AE (tiempo en la base) son aviso; la página y el panel no llaman a Google y todos sus archivos cargan |
 | 5.1.6 | GUIA: prueba de la red de la UCSM, correo para TI, caso de freno por red en el ensayo, plan de contingencia, quién vigila qué, texto de difusión y hora de apertura |
 
+## Sprint 6 · Apertura de la Etapa 1 · 09/11 a 11/11 · entregado el 07/11
+
+Fechas: ensayo el 10/11; apertura de la Etapa 1 el miércoles 11/11 (hora del propietario; recomendada 20:00); congreso del 16 al 21/11 (viicideic.space); borrado de datos a más tardar el 19/02/2027. Guía: `sprints/sprint-6/GUIA.md`.
+
+| # | Tarea |
+|---|---|
+| 6.1 | **Correos de Supabase:** SMTP propio en PRUEBA y PRODUCCIÓN. Sin él, las invitaciones al equipo no llegan: el correo de Supabase solo envía a los miembros de la organización, y 2 por hora |
+| 6.2 | Migraciones 11 (textos sin caracteres invisibles, R-47) y 12 (limpieza de intentos con pg_cron cada 5 min, incidencia #40) en PRUEBA; migraciones 10 a 12 en PRODUCCIÓN (Fase 1, 09/11). El mismo día, la cuenta del propietario en PRODUCCIÓN (Create new user y `asignar_propietario`): la única sentencia SQL queda antes del congelamiento |
+| 6.3 | Panel: no se deja enmarcar; "Copiar mensaje" en Buscar (procedimiento 2); un doble toque en "Guardar" ya no crea dos actividades; con `PANEL_PRUEBA: false`, sin "Entrar con la clave de prueba" |
+| 6.4 | Prueba de ataque en PRUEBA (`tester/ataque.py`, doc §22.4), antes del ensayo |
+| 6.5 | Fase 2 (10/11, después del ensayo): `sprints/sprint-6/configurar.py` → `config.js` a PRODUCCIÓN; tester en lectura comprueba con el tráfico real que la página y el panel publicados llaman a PRODUCCIÓN; el propietario registra su código y el equipo entra por invitación (desde el panel, aun en el congelamiento) |
+| 6.6 | Fase 3 (11/11): padrón, actividades y enlaces desde el panel; revisión; respaldo → Pasar a producción → respaldo → tester en lectura → congelamiento → abrir |
+| 6.7 | Opcional: dominio `inscripciones.viicideic.space`, solo si queda listo antes del 10/11 a las 12:00; si no, github.io |
+| 6.8 | Congelamiento: todo el SQL de PRODUCCIÓN el 09/11; desde el 10/11 a las 20:00, solo el panel. Problemas del ensayo: tabla de la GUIA (parte 4.1) y decisión de seguir o no el 11/11 a las 12:00 |
+| 6.9 | Skill `ciic-desarrollo` al día para Windows (variables de PostgreSQL y Python, rutas en `resultados/`, `--personas-w 300` desde la PC, bitácora en `INCIDENCIAS.md`) |
+
 ## Apertura
 
-1. Migración 10 en PRODUCCIÓN (después del ensayo).
+1. Migraciones 10 a 12 en PRODUCCIÓN (Fase 1 del Sprint 6), antes del congelamiento.
 2. Respaldo → Sistema → Pasar a producción → respaldo → tester en modo lectura → empieza el congelamiento (doc §20.1).

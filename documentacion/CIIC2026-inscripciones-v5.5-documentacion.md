@@ -1,10 +1,10 @@
 # Sistema de inscripciones CIIC 2026 · v5.5 · Documentación técnica completa
 
-Fecha: 07-11-2026 · Revisión 11 (Sprint 5.1) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
+Fecha: 07-11-2026 · Revisión 12 (Sprint 6) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
 
 Este documento describe cada pieza del sistema: qué es, qué hace, qué datos recibe y entrega, y qué reglas cumple. Es la referencia para programar, probar, operar y auditar. Los HTML, el SQL y el tester se construyen contra él, por sprints (sección 23).
 
-La revisión 11 (Sprint 5.1) agrega las redes con intentos fallidos en el panel (R-46), la limpieza de intentos al terminar su ventana (R-25), la fuente alojada en `docs/tema/fuentes/` y el aviso de privacidad corregido (11.3). La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
+La revisión 12 (Sprint 6) agrega la apertura: fechas reales (congreso del 16 al 21/11, Etapa 1 abre el 11/11, borrado a más tardar el 19/02/2027), `config.js` hacia PRODUCCIÓN sin la clave de prueba en el panel (R-37), textos sin caracteres invisibles (R-47, migración 11), limpieza de intentos con pg_cron cada 5 minutos (R-25, migración 12), congelamiento desde el 10/11 a las 20:00 (20.1), panel que no se deja enmarcar, "Copiar mensaje" y la prueba de ataque (22). La revisión 11 (Sprint 5.1) agrega las redes con intentos fallidos en el panel (R-46), la limpieza de intentos al terminar su ventana (R-25), la fuente alojada en `docs/tema/fuentes/` y el aviso de privacidad corregido (11.3). La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
 
 Las marcas **[v5.2]**, **[v5.3]**, **[v5.4]** y **[v5.5]** indican en qué versión del contrato cambió cada punto respecto de lo construido en la v5.1. Lo que no tiene marca ya funciona así en el código construido.
 
@@ -280,7 +280,7 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 
 ### R-25 · Límite de intentos
 - **Qué dice:** 4 documentos fallidos por dispositivo en 10 minutos; 300 por red en 10 minutos [Sprint 5.1; antes 30]. Un acierto reinicia el contador del dispositivo. La ventana es fija, alineada al reloj (hh:00, hh:10…): al empezar la siguiente, el contador vuelve a 0. Los límites se cambian desde Operación → Redes con intentos fallidos (propietario) y valen de inmediato.
-- **Retención [Sprint 5.1]:** las filas de `intentos` (IP de la red e identificador del navegador) se borran en cuanto termina su ventana. Lo hace la consulta `estado` (`privado.limpiar_intentos`), que las páginas abiertas repiten cada 20 s, de a una por vez y con `SKIP LOCKED`: nunca espera ni hace esperar a verificar o registrar. Sin visitas, la consulta horaria de "Mantener Supabase activo" hace lo mismo. Nunca entran en el respaldo.
+- **Retención [Sprint 5.1]:** las filas de `intentos` (IP de la red e identificador del navegador) se borran en cuanto termina su ventana. Lo hace la consulta `estado` (`privado.limpiar_intentos`), que las páginas abiertas repiten cada 20 s, de a una por vez y con `SKIP LOCKED`: nunca espera ni hace esperar a verificar o registrar. Sin visitas, la base misma llama a `privado.limpiar_intentos()` cada 5 minutos con pg_cron [Sprint 6, migración 12]: una fila dura a lo más su ventana más 5 minutos. Antes lo cubría la consulta horaria de "Mantener Supabase activo", pero GitHub atrasa o se salta ese horario (incidencia #40). Si una base no tiene pg_cron (la local), la limpieza sigue con `estado` y "Mantener activo". Nunca entran en el respaldo.
 - **Detalle:** sección 8.
 
 ### R-26 · Roles por nivel [v5.3]
@@ -344,6 +344,12 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 
 ### R-37 · Producción sin clave de prueba [v5.2]
 - **Qué dice:** un trigger en `config` borra `ADMIN_KEY` cuando el modo pasa a PRODUCCION. Volver a PRUEBA no la recupera: hay que crear otra.
+- **En el panel [Sprint 6]:** con `PANEL_PRUEBA: false` en `config.js` (lo pone `sprints/sprint-6/configurar.py` al apuntar a PRODUCCIÓN), el panel publicado no muestra "Entrar con la clave de prueba", aunque la base siga en modo PRUEBA hasta "Pasar a producción". El tester en modo lectura lo comprueba en la página publicada, sin inyectar nada.
+
+### R-47 · Textos limpios [Sprint 6]
+- **Qué dice:** nombres, apellidos, correo y los textos de actividades y padrón se guardan sin caracteres de control ni invisibles o de dirección (U+200B…U+200F, U+202A…U+202E, U+2060…U+2064, U+2066…U+2069, U+FEFF), con los espacios juntados y sin `=`, `+`, `-` ni `@` al inicio. Hasta 60 caracteres en nombres y apellidos.
+- **Por qué:** la prueba de ataque del Sprint 6 guardó un apellido con U+202E, que muestra el texto al revés en el panel y en el CSV.
+- **Dónde:** `privado.texto_limpio` (migración 11).
 
 ### R-38 · Listas por actividad [v5.3]
 - **Qué dice:** por visita o taller (o de todas) y por etapa (o todas), los participantes confirmados ordenados por apellidos y nombres, con DNI, correo, celular, etapa, código interno, origen y estado de grupo. Se buscan por número, DNI o nombre. Cada persona y actividad tiene una marca "en el grupo" (`en_grupo`), con quién la puso y cuándo. El botón la guarda en la base en una transacción con `solicitud` (repetir el clic por una respuesta perdida no la cambia dos veces) y la pantalla se vuelve a leer de la base, así que lo que ves es lo que quedó guardado.
@@ -1496,7 +1502,7 @@ Si algo sale mal entre los pasos 2 y 7, se restaura el respaldo del paso 1 con `
 |---|---|
 | Al terminar el congreso | Respaldo final, CSV de todas las listas y CSV por actividad para cada encargado |
 | Durante los 90 días | La base sigue activa para asistencia y consultas; el flujo de 21.1 evita la pausa |
-| Día 90 | Borrar el proyecto de Supabase (Project Settings → General → Delete project), borrar los respaldos y CSV propios, y pedir a cada encargado que borre los suyos. Anotar la fecha |
+| Día 90: **a más tardar el 19/02/2027** (el congreso termina el 21/11/2026, según viicideic.space) | Borrar el proyecto de Supabase (Project Settings → General → Delete project), borrar los respaldos y CSV propios, y pedir a cada encargado que borre los suyos. Anotar la fecha |
 
 Si algún uso futuro necesita los datos más allá de los 90 días, primero se cambia el aviso de privacidad y se sube `aviso_version`.
 
@@ -1521,6 +1527,8 @@ Desde 24 horas antes de abrir hasta el fin del congreso, incluida la semana de e
 | Roles del equipo | Sistema → Equipo |
 
 **Excepción** (solo si algo crítico no se puede resolver desde el panel): respaldo → probar en el proyecto de prueba con el tester completo → cerrar inscripciones → respaldo → aplicar → tester en modo lectura → abrir. Todo anotado en la bitácora del proyecto.
+
+**En la apertura del 11/11 a las 20:00 [Sprint 6]:** el congelamiento empieza el 10/11 a las 20:00. Todo el SQL de PRODUCCIÓN del Sprint 6 va el 09/11 (migraciones 10 a 12 y `asignar_propietario`). Entre el 10/11 a las 20:00 y Pasar a producción (11/11, 12:00), además del panel, solo se cambian las páginas para corregir lo que encontró el ensayo, con el tester en local y en PRUEBA. Desde Pasar a producción, solo el panel. Qué hacer con cada tipo de problema: `sprints/sprint-6/GUIA.md`, parte 4.1.
 
 ### 20.2 Reglas
 
@@ -1627,7 +1635,7 @@ Despliegue recomendado:
 
 | Opción | Qué hace | Cuándo |
 |---|---|---|
-| Flujo "Mantener Supabase activo" | `.github/workflows/mantener-activo.yml` hace dos veces al día una consulta real a la base (`estado`). Lee `config.js` publicado en GitHub Pages (o la variable de repositorio `CONFIG_URL`), no usa acciones de terceros, valida HTTP 200 y que el JSON diga `tipo: estado` (con `jq`), oculta la clave en el registro y no imprime la respuesta. Si falla tres veces, GitHub te avisa por correo | Desde que crees el proyecto, siempre |
+| Flujo "Mantener Supabase activo" | `.github/workflows/mantener-activo.yml` hace cada hora [Sprint 5.1] una consulta real a la base (`estado`). El horario de GitHub es de mejor esfuerzo: se atrasa horas o se salta (incidencia #40). Para la pausa de 7 días alcanza; para borrar los intentos ya no se depende de él (pg_cron, R-25). Lee `config.js` publicado en GitHub Pages (o la variable de repositorio `CONFIG_URL`), no usa acciones de terceros, valida HTTP 200 y que el JSON diga `tipo: estado` (con `jq`), oculta la clave en el registro y no imprime la respuesta. Si falla tres veces, GitHub te avisa por correo | Desde que crees el proyecto, siempre |
 | Plan de pago | Los proyectos de pago nunca se pausan | No se usa: sin presupuesto (D17) |
 | Entrar al proyecto | Supabase avisa por correo una semana antes de pausar; entrar al panel del proyecto genera actividad | Respaldo manual |
 
@@ -1735,10 +1743,27 @@ Nada se abre al público sin los bloques críticos en verde contra el proyecto r
 | AJ · Vaciar datos de prueba [v5.5] | Rechazado abierto, sin llave, como admin o en PRODUCCION; vacía todo lo de prueba; configuración y equipo intactos | Sí |
 | AK · Importar actividades [v5.5] | Las 28 del CSV de prueba se agregan; repetidas sin cambios; filas inválidas con motivo; después de vaciar e importar, la base vuelve a inscribir | Sí |
 | AI · Idempotencia con ámbito | La misma `solicitud` de otra cuenta o de otro documento no choca; una `solicitud` que no es UUID → `valor_invalido` | Sí |
+| AL · Redes con intentos fallidos [Sprint 5.1] | Niveles; una red cerca, frenada y liberada; IP enmascarada; bitácora; borrado de ventanas terminadas | Sí |
+| Lectura · página publicada [Sprint 6] | Sin inyectar nada: la página y el panel publicados llaman solo al proyecto de `--api`, el panel no ofrece la clave de prueba y la base tiene las migraciones 10 y 11 (`5.5-s6`) | Sí, en la apertura |
+
+### 22.4 Prueba de ataque [Sprint 6]
+
+`tester/ataque.py`, solo contra PRUEBA (se niega en modo PRODUCCION o si `config.js` ya apunta a PRODUCCIÓN). Ataca con la ANON_KEY publicada; la clave del tester solo prepara y limpia. Unos 3 a 5 minutos:
+
+| # | Ataque | Resiste si |
+|---|---|---|
+| 1 | Leer o escribir tablas por PostgREST, llamar funciones de `privado`, GraphQL, crear una cuenta | No hay filas ni escritura; GraphQL no muestra tablas; "Allow new users to sign up" apagado |
+| 2 | Enumerar documentos cambiando de dispositivo; falsear la IP con cabeceras; dispositivos raros | La red se frena cerca del límite; ninguna respuesta trae datos personales; las cabeceras falsas no la sacan del freno |
+| 3 | Documentos raros (tipos, 5000 caracteres, Unicode, inyección SQL o HTML, carácter nulo) | Respuesta controlada en menos de 3 s, sin error interno |
+| 4 | Inscribir de más: el mismo documento 20 veces a la vez, 3 actividades, repetidas, inexistentes, 2 visitas, sin aviso, ronda vieja, sin solicitud o reusada, etapa no habilitada, fuera del padrón | Una sola inscripción y ninguna fuera de las reglas |
+| 5 | Campos raros: HTML, fórmulas, caracteres invisibles y de dirección, 5000 letras, celular o correo inválidos | Se guarda como texto limpio y recortado (R-47) |
+| 6 | Panel sin sesión, rol pedido en el cuerpo, adivinar la clave del tester, tokens falsificados (sin firma, otra clave, service_role, vencido), sesión sin código, rol menor | Todo rechazado; la clave falsa cuesta 1,5 s por intento |
+| 7 | Verificar celular y exportar sin sesión; un operador que prueba celulares | Rechazado sin sesión; con sesión es un riesgo aceptado (el operador ya ve su lista) y queda en la bitácora |
+| 8 | Enmarcar el panel en otro sitio (clickjacking) | El panel no se muestra dentro de un marco de otro origen |
 
 ## 23. Sprints
 
-Con el congreso el 12 de noviembre, cada sprint dura un día. La v5.1 construida (163 de 163 pruebas) es la base: no se empieza de cero.
+Con el congreso del 16 al 21 de noviembre (la Etapa 1 abre el 11/11), cada sprint dura un día. [Sprint 6] Hasta el Sprint 5.1 este documento decía "congreso el 12/11": la fecha real es la de viicideic.space. La v5.1 construida (163 de 163 pruebas) es la base: no se empieza de cero.
 
 | Sprint | Fecha | Contenido | Cierra cuando |
 |---|---|---|---|
@@ -1748,9 +1773,9 @@ Con el congreso el 12 de noviembre, cada sprint dura un día. La v5.1 construida
 | 3 | 07/11 | Proyecto real: Supabase de prueba y de producción, Auth con código, cuenta del propietario, datos reales cargados desde el panel con los pasos de la sección 19.7, tester desde GitHub, flujo "Mantener Supabase activo", confirmar la cabecera de IP | Tester completo en verde contra Supabase; flujo de mantener activo en verde |
 | 4 | 08/11 | Carga y operación: D3, D6, D10 (ventanas sostenidas), D14, D17 (respaldo y `restaurar.py`), pasar a producción, retroceso exponencial; 1000 personas; simulacro de restauración | Bloques W, X, Y y AF en verde; P95 anotado |
 | 5 | 09/11 y 10/11 | Diseño de autor sobre `base.css`; equipo invitado con sus roles; ensayo con diez personas, cierre en medio y un cambio por soporte | Tester de navegador en verde y ensayo sin incidencias |
-| 6 | Apertura | Lista de control: respaldo; Sistema → Pasar a producción (vacía lo de prueba y borra la clave del tester); respaldo; tester en lectura; empieza el congelamiento | Tester en modo lectura en verde |
+| 6 | 09/11 a 11/11 | Fase 1 (09/11): migraciones 11 y 12, panel y prueba de ataque en PRUEBA; migraciones 10 a 12 y la cuenta del propietario en PRODUCCIÓN. Fase 2 (10/11, después del ensayo y antes del congelamiento de las 20:00): `config.js` → PRODUCCIÓN y cuentas. Fase 3 (11/11): datos reales, respaldo, Pasar a producción, respaldo, tester en lectura y apertura de la Etapa 1 a las 20:00 (`sprints/sprint-6/GUIA.md`) | Tester en modo lectura en verde |
 
-Estado al 07/11: sprints 1 a 4 cerrados. Sprint 5 aplicado en PRUEBA (tema CIDEIC, aviso de privacidad, guía del equipo y del ensayo; local 364/364, GitHub 295/295). Sprint 5.1 entregado: migración 10 (redes con intentos fallidos, limpieza de intentos, límite por red 300), fuente local, aviso corregido, prueba de la red de la UCSM y plan de contingencia. PRODUCCIÓN sigue en 5.5-s4.1, vacía y cerrada: la migración 10 se le instala en el Sprint 6, después del ensayo.
+Estado al 07/11: sprints 1 a 4 cerrados. Sprint 5 y 5.1 aplicados en PRUEBA (5.5-s5.1; local 383/383, PC 350/350 sin avisos, GitHub 302/302). Sprint 6 entregado: migraciones 11 y 12, `config.js` hacia PRODUCCIÓN con comprobación, prueba de ataque, "Copiar mensaje" y guía de la apertura. PRODUCCIÓN sigue en 5.5-s4.1, vacía y cerrada: recibe las migraciones 10 a 12 en la Fase 1 del Sprint 6 (09/11), antes del congelamiento (10/11, 20:00).
 
 ## 24. Decisiones abiertas
 

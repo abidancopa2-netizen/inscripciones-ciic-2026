@@ -196,6 +196,8 @@ class Tester:
         print(pinta(AZUL, f'\n▶ {t}'))
 
     MASCARAS = [
+        (re.compile(r'\b(\d{1,3}\.\d{1,3})\.\d{1,3}\.\d{1,3}\b'), r'\1.•.•'),                     # IPv4 (Sprint 6: el registro de GitHub es público)
+        (re.compile(r'\b([0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}):[0-9a-fA-F:]{2,}'), r'\1:•'),         # IPv6
         (re.compile(r"(['\"](?:nombre|nombres|apellidos)['\"]\s*:\s*['\"])[^'\"]*"), r'\1•••'),
         (re.compile(r'([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})'), r'\1•••@\2'),
         (re.compile(r'(\+\d{2,3})\d{3,}(\d{3})\b'), r'\1•••\2'),
@@ -442,11 +444,13 @@ class Tester:
         self.tipo('Sin aceptar el aviso de privacidad', self.reg(d, [v1['id'], t2['id']], aceptaPrivacidad=False), 'sin_consentimiento')
         self.tipo('Celular peruano que no empieza con 9', self.reg(d, [v1['id'], t2['id']], celular='812345678'), 'celular_invalido')
         self.tipo('Sin consentimiento de WhatsApp', self.reg(d, [v1['id'], t2['id']], acepta=False), 'sin_consentimiento')
-        r = self.reg(d, [v1['id'], t2['id']], nombres='=HYPERLINK("x")  María ')
+        r = self.reg(d, [v1['id'], t2['id']], nombres='=HYPERLINK("x")  María ', apellidos='Quispe\u202e\u200bRojas')
         self.ok('Visita + taller válidos → registrado', r.get('tipo') == 'registrado', 'registrado', r.get('tipo'), r.get('mensaje'))
         self.ok('El comprobante trae las 2 actividades con su grupo', len(r.get('actividades', [])) == 2 and all('grupoModo' in x for x in r.get('actividades', [])), '2', '')
         b = self.panel('panel_buscar', q=d)
         self.ok('El nombre se guarda sin fórmula al inicio (CSV seguro)', b['registros'] and not b['registros'][0]['nombre'].startswith('='), 'sin =', b['registros'] and b['registros'][0]['nombre'])
+        ap_ = b['registros'][0].get('apellidos', '') if b['registros'] else ''
+        self.ok('Los apellidos se guardan sin caracteres invisibles ni de dirección (Sprint 6)', ap_ == 'QuispeRojas', 'QuispeRojas', repr(ap_))
         self.tipo('Volver a verificar → duplicado (solo el aviso, R-31)', self.api(action='verificar', dni=d), 'duplicado')
         self.tipo('Registrar otra vez → duplicado', self.reg(d, [v1['id'], t2['id']]), 'duplicado')
 
@@ -968,7 +972,7 @@ class Tester:
         r = self.cli.llamar({'action': 'admin_cabeceras', 'key': self.key})
         self.ok('admin_cabeceras muestra las cabeceras y la red resuelta', r.get('tipo') == 'admin' and 'red' in r and 'x-forwarded-for' in r, 'admin', r.get('tipo'))
         if not self.a.local:
-            print(pinta(GRIS, f"  … cabeceras: {r.get('cabeceras')} · cf-connecting-ip {r.get('cf-connecting-ip')} · x-real-ip {r.get('x-real-ip')} · x-forwarded-for {r.get('x-forwarded-for')} · red {r.get('red')} · ip_cabecera {r.get('ipCabecera')}"))
+            print(pinta(GRIS, self.mascara(f"  … cabeceras: {r.get('cabeceras')} · cf-connecting-ip {r.get('cf-connecting-ip')} · x-real-ip {r.get('x-real-ip')} · x-forwarded-for {r.get('x-forwarded-for')} · red {r.get('red')} · ip_cabecera {r.get('ipCabecera')}")))
             h = {'apikey': self.a.anon, **({'Authorization': f'Bearer {self.a.anon}'} if self.a.anon.startswith('eyJ') else {})}
             for cab, valor in (('X-Forwarded-For', '198.51.100.7'), ('X-Real-IP', '198.51.100.8'), ('CF-Connecting-IP', '198.51.100.9')):
                 try:            # llamada directa, sin reintentos: el proxy de Supabase puede rechazarla, y eso también es seguro
@@ -1770,6 +1774,41 @@ class Tester:
                 self.ok('Panel: marcar en el grupo se guarda y se relee', True)
                 pp.locator(f'#l-tabla [data-grupo="{cod}"]').click()
                 pp.wait_for_function(marca, arg=[cod, 'true' if antes == 'false' else 'false'], timeout=20000)
+                # Sprint 6 · "Copiar mensaje" (procedimiento 2) y el doble toque en "Guardar" de Nueva actividad
+                ctx.grant_permissions(['clipboard-read', 'clipboard-write'])
+                pp.click('[data-tab="operacion"]')          # "Buscar, cambiar o anular" está en Operación
+                pp.fill('#q', d)
+                pp.click('#btn-buscar')
+                pp.wait_for_selector('#res-buscar [data-copiar]', timeout=15000)
+                pp.click('#res-buscar [data-copiar]')
+                pp.wait_for_selector('#modal[open]', timeout=5000)
+                self.ok('Panel: "Copiar mensaje" pide comprobar el celular y el documento', d in pp.inner_text('#m-txt'), 'pregunta', pp.inner_text('#m-txt')[:60])
+                pp.click('#m-ok')
+                pp.wait_for_timeout(800)
+                try:
+                    copiado = pp.evaluate('navigator.clipboard.readText()')
+                except Exception:  # noqa: BLE001
+                    copiado = pp.inner_text('#m-txt')
+                if pp.is_visible('#modal[open]'):
+                    pp.click('#m-ok')
+                nombres_acts = [self.acts()[i]['nombre'] for i in ids]
+                self.ok('Panel: "Copiar mensaje" arma el mensaje con sus 2 actividades', all(n in copiado for n in nombres_acts), 'las 2 actividades', copiado[:60])
+                pp.click('[data-tab="actividades"]')
+                pp.click('#btn-nueva')
+                nombre_doble = 'Doble toque ' + uuid.uuid4().hex[:6]
+                pp.select_option('#f-tipo', 'TALLER')
+                pp.fill('#f-fecha', self.dias(self.acts())[0])
+                pp.fill('#f-nombre', nombre_doble)
+                pp.fill('#f-lugar', 'Aula de prueba')
+                pp.fill('#f-inicio', '20:00')
+                pp.fill('#f-fin', '21:00')
+                pp.fill('#f-cupo', '5')
+                pp.dblclick('#btn-guardar-act')
+                pp.wait_for_timeout(2500)
+                creadas = [x for x in self.acts().values() if x['nombre'] == nombre_doble]
+                self.ok('Panel: un doble toque en "Guardar" crea una sola actividad', len(creadas) == 1, 1, len(creadas))
+                for x in creadas:
+                    self.panel('panel_quitar', id=x['id'])
                 for t in ('participantes', 'actividades', 'listas', 'sistema'):
                     pp.click(f'[data-tab="{t}"]')
                     pp.wait_for_timeout(700)
@@ -2158,7 +2197,33 @@ class Tester:
                     self.config_publicada(nav, self.a.web.rstrip('/') + '/')
                 except Exception as e:  # noqa: BLE001
                     self.ok('Página publicada con su propio config.js', False, 'carga', str(e)[:200])
+                try:
+                    self.publicada_apunta(nav, self.a.web.rstrip('/') + '/')
+                except Exception as e:  # noqa: BLE001
+                    self.ok('Página y panel publicados llaman al proyecto de --api', False, 'cargan', str(e)[:200])
                 nav.close()
+
+    def publicada_apunta(self, nav, web):
+        """Sprint 6 · En la apertura: la página y el panel PUBLICADOS, sin inyectar config.js ni nada, llaman de verdad al proyecto
+        que se pasó en --api (PRODUCCIÓN), y el panel no ofrece la clave de prueba. Se mira el tráfico real del navegador."""
+        esperado = re.sub(r'^https?://([^/]+).*$', r'\1', self.a.api)
+        for pagina, espera in (('index.html', '#form-doc'), ('panel.html', '#form-login')):
+            ctx = nav.new_context()
+            hosts, pg = set(), ctx.new_page()
+            ctx.on('request', lambda q: hosts.add(re.sub(r'^https?://([^/]+).*$', r'\1', q.url)) if '/rest/v1/' in q.url or '/auth/v1/' in q.url else None)
+            try:
+                pg.goto(web + pagina)
+                pg.wait_for_selector(espera, timeout=20000)
+                pg.wait_for_timeout(3000)
+                if pagina == 'panel.html':
+                    visible = pg.evaluate("(() => { const x = document.getElementById('paso-prueba'); return !!x && !x.hidden && x.offsetParent !== null; })()")
+                    self.ok('Panel publicado sin "Entrar con la clave de prueba"', not visible, 'oculto', 'visible' if visible else 'oculto')
+            finally:
+                ctx.close()
+            self.ok(f'{pagina} publicada llama solo al proyecto de --api ({esperado.split(".")[0][:4]}…)', hosts == {esperado},
+                    esperado.split('.')[0][:4] + '…', sorted(h.split('.')[0][:4] + '…' for h in hosts) or 'ninguna llamada')
+        v = str(self.cli.llamar({}).get('version', ''))          # la acción vacía devuelve la versión del backend
+        self.ok('El proyecto de --api tiene las migraciones del Sprint 6 (5.5-s6 o posterior)', v >= '5.5-s6', '5.5-s6', v)
 
     def reporte(self, error, dur):
         pasan = sum(1 for r in self.res if r['ok'] is True)
@@ -2179,7 +2244,7 @@ class Tester:
         (self.salida / 'resultados.json').write_text(json.dumps({'pasan': pasan, 'fallan': fallan, 'omitidas': omit, 'error': error, 'reintentos': self.cli.motivos,
                                                                  'causas': {k: self.mascara(v) for k, v in self.cli.ejemplos.items()}, 'pruebas': self.res},
                                                                 ensure_ascii=False, indent=1), encoding='utf-8')
-        md = ['# Reporte del tester · v5.5 (Sprint 5)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
+        md = ['# Reporte del tester · v5.5 (Sprint 6)', '', f'**{pasan} de {pasan + fallan} pruebas pasaron**' + (f' · {omit} omitidas' if omit else ''), '']
         if error:
             md += [f'> ⛔ {error}', '']
         md += ['| | Bloque | Prueba | Esperado | Obtenido |', '|---|---|---|---|---|']
@@ -2230,8 +2295,12 @@ def main():
     if not a.api or not a.anon:
         print('⛔ Falta API_URL o ANON_KEY: pégalos en docs/config.js o usa --api y --anon.')
         return 2
+    if (a.modo != 'lectura' and not os.environ.get('API_URL') and '--api' not in sys.argv and (RAIZ / 'docs' / 'config.js').exists()
+            and re.search(r'PANEL_PRUEBA\s*:\s*false', (RAIZ / 'docs' / 'config.js').read_text(encoding='utf-8'))):
+        print('⛔ docs/config.js apunta a PRODUCCIÓN (Sprint 6): las pruebas completas van contra PRUEBA. Pasa --api y --anon de PRUEBA.')
+        return 2
     t = Tester(a)
-    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 5.1) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
+    print(pinta(AZUL, '═' * 70) + '\n' + pinta(AZUL, f'  🧪 TESTER · Inscripciones CIIC 2026 v5.5 (Sprint 6) · modo {a.modo}') + '\n' + pinta(GRIS, f'  API: {a.api}  ·  Página: {a.web or "(sin navegador)"}'))
     inicio, error = time.perf_counter(), None
     try:
         if a.modo == 'lectura':

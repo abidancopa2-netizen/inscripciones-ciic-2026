@@ -1,0 +1,62 @@
+{
+ "sprint": "sprint-6",
+ "siguiente": "Fase 1 (09/11): instalar.py en local (Pendientes: 11 y 12), tester con --web y ataque.py --local. Luego PRUEBA: instalar.py --verificar y sin --verificar, commit y push, tester desde la PC (--dsn, --web, --personas-w 300), el de GitHub y ataque.py contra PRUEBA. PRODUCCIÓN (migraciones 10 a 12) solo si el propietario lo pide en esta sesión, con el ataque en verde y antes del congelamiento (10/11, 20:00). Cada paso, en la bitácora de INCIDENCIAS.md. config.js NO cambia hasta la Fase 2 (10/11, después del ensayo).",
+ "archivos": {
+  "supabase/11_sprint6_textos.sql": {
+   "base": null,
+   "nuevo": "e4ca4f3acb05"
+  },
+  "supabase/12_sprint6_limpieza_programada.sql": {
+   "base": null,
+   "nuevo": "243dbfb8768b"
+  },
+  "supabase/instalar.py": {
+   "base": "af28c0e3ea97",
+   "nuevo": "78c626e7af0c"
+  },
+  "docs/panel.html": {
+   "base": "3c36ee6a34d8",
+   "nuevo": "c6f9a329e284"
+  },
+  "tester/tester.py": {
+   "base": "013a5d638216",
+   "nuevo": "901ef2068cc7"
+  },
+  "tester/ataque.py": {
+   "base": null,
+   "nuevo": "279f35eacd83"
+  },
+  ".gitattributes": {
+   "base": "69b9992c2af0",
+   "nuevo": "bd103e1738de"
+  },
+  ".github/workflows/mantener-activo.yml": {
+   "base": "c21ea8c66c81",
+   "nuevo": "2c964e6c9176"
+  },
+  "CLAUDE.md": {
+   "base": "7454afc08785",
+   "nuevo": "265a672b5dd0"
+  },
+  ".claude/skills/ciic-desarrollo/SKILL.md": {
+   "base": "ef74736a99d9",
+   "nuevo": "aa62e7e37831"
+  },
+  "sprints/PLAN.md": {
+   "base": "e780fcfe7a2d",
+   "nuevo": "ce4f9f5bdb4b"
+  },
+  "sprints/sprint-5/GUIA.md": {
+   "base": "4bf48dcae80a",
+   "nuevo": "64e63e1172af"
+  },
+  "sprints/sprint-6/GUIA.md": {
+   "base": null,
+   "nuevo": "745701d21298"
+  },
+  "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+   "base": "1df733fee18b",
+   "nuevo": "182c359608ac"
+  }
+ }
+}

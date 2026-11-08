@@ -16,7 +16,7 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 
 | Ruta | Qué es |
 |---|---|
-| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql` … `10_sprint5_redes.sql`) |
+| `supabase/01_esquema.sql`, `02_api.sql`, `03_…` | Base construida (v5.1) y migraciones de cada sprint, en orden (`03_sprint1_seguridad.sql` … `12_sprint6_limpieza_programada.sql`) |
 | `supabase/instalar.py` | Instala o pone al día una base: aplica solo las migraciones pendientes, todas en una transacción (registro `privado.migraciones`) |
 | `supabase/restaurar.py` | Restaura un respaldo del panel: `--verificar`, `--solo-faltantes`, `--completo`, `--simular` (documentación §19.5) |
 | `local/armar_demos.py` | Arma `demo/*.html` (un archivo por página) a partir de docs/. No se editan a mano |
@@ -24,7 +24,8 @@ El diseño y el código pesado se escriben en otra conversación y llegan a este
 | `docs/index.html`, `docs/panel.html`, `docs/base.css`, `docs/config.js` | Páginas ya en v5.5 (participante y panel) |
 | `docs/tema/` | Tema CIDEIC (Sprint 5): CSS, JS e imágenes del diseño de autor, aparte del contrato. `docs/tema/fuentes/` (Sprint 5.1): la fuente Saira alojada aquí; la crea `sprints/sprint-5.1/fuente.py` y no va en los manifiestos |
 | `docs/demo/demo-api.js` | **Referencia ejecutable del contrato v5.5**: si dudas qué debe responder la base, mira la función correspondiente aquí |
-| `tester/tester.py` | Tester (383 pruebas en local desde el Sprint 5.1, con el bloque AL; los sprints agregan bloques) |
+| `tester/tester.py` | Tester (387 pruebas en local desde el Sprint 6; los sprints agregan bloques). En modo `lectura` con `--web`, comprueba la página publicada sin inyectar nada. Las pruebas completas no toman `--api` de `config.js` si ya apunta a PRODUCCIÓN |
+| `tester/ataque.py` | Prueba de ataque (Sprint 6), solo contra PRUEBA: la ANON_KEY publicada contra tablas, límites, inscripciones, campos, panel y marcos (doc §22.4). Escribe en `resultados/ataque/` (fuera de Git) |
 | `local/` | PostgreSQL local que imita a Supabase + servidor local |
 | `sprints/PLAN.md` | Tareas y criterios de aceptación de cada sprint |
 | `.claude/skills/` | `ciic-desarrollo` (cómo ejecutar un sprint) y `sql-ciic-inscripciones` (reglas para tocar SQL) |
@@ -46,7 +47,7 @@ psql -d ciic -tAc "select privado.crear_clave_admin();"        # guarda la clave
 python local/servidor_local.py --dsn "dbname=ciic" --puerto 8787 &
 
 # Tester completo en local
-python tester/tester.py --api http://127.0.0.1:8787 --anon local --key "$CLAVE" --local --dsn "dbname=ciic" --web http://127.0.0.1:8787/ --personas 150 --salida /tmp/r
+python tester/tester.py --api http://127.0.0.1:8787 --anon local --key "$CLAVE" --local --dsn "dbname=ciic" --web http://127.0.0.1:8787/ --personas 150 --salida resultados/local
 #   el bloque W inscribe 1000 personas más (--personas-w 1000 por defecto; --personas-w 0 para una corrida rápida)
 python local/medir_local.py --dsn "dbname=ciic" --api http://127.0.0.1:8787   # si la carga se ve lenta
 
