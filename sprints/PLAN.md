@@ -156,3 +156,12 @@ Pedido del ensayo (08/11, adelantado). Solo la página de inscripción y textos:
 | 6.2.1 | Pantalla 2: el campo del correo se titula "Correo institucional" con el ejemplo `nombre.apellido@estudiante.ucsm.edu.pe`. La validación no cambia: cualquier correo con formato válido (decisión del 07/11) |
 | 6.2.2 | Doc revisión 14: D15 y R-25 (la barrera real es el límite por red, #46), 2 filas de §24 y el Security Advisor como riesgo revisado y aceptado |
 | 6.2.3 | GUIA del Sprint 5 (parte D): reparto para 2 admin y 18 operadores (coordinadores por bloque, 7 parejas de grupos, 2 en el WhatsApp de contacto) y la regla "solo los admin exportan". GUIA del Sprint 6: Rate Limits de Auth en 100 cada 5 min por IP (parte 2); invitaciones por tandas y compromiso de confidencialidad antes de invitar (parte 4) |
+
+## Sprint 6.3 · Prueba del 0 en el tester y revisión del CSV del padrón · entregado el 09/11
+
+Se aplica **después de la Fase 2** y antes del congelamiento (10/11, 20:00). Solo el tester y la GUIA: sin página, sin SQL, sin `config.js`; la base sigue en `5.5-s6`.
+
+| # | Tarea |
+|---|---|
+| 6.3.1 | Tester (#47): la prueba "enviado como número recupera el 0" usa un DNI de 8 dígitos de la muestra de la Etapa 1 que empiece en 0, no el primero de la lista. Si la muestra no trae ninguno, la prueba se omite con su motivo. El contrato no cambia: solo se rellena a 8 dígitos |
+| 6.3.2 | GUIA del Sprint 6, parte 5.1: revisión del CSV antes de importar (documento como Texto, largos con `LARGO`, duplicados, etapas) y cuadre de filas leídas e informe. "Importar padrón" rellena a 8 sin avisar, así que un carné que perdió su 0 no se detecta en el informe |

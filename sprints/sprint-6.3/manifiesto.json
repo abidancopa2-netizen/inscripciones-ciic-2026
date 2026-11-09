@@ -1,0 +1,18 @@
+{
+  "sprint": "sprint-6.3",
+  "siguiente": "Después de la Fase 2 y antes del 10/11 20:00, sobre 292a946: aplicar.py --verificar (3 cambian, sin conflictos), aplicar.py, instalar.py --verificar en local (Pendientes: ninguna), tester local con --web (390/390, 1 omitida), commit y push, tester de GitHub (306/306, o 305/305 con la prueba del 0 omitida). Sin página ni SQL; config.js no cambia; nada en PRODUCCIÓN.",
+  "archivos": {
+    "tester/tester.py": {
+      "base": "4853ea1c54f8",
+      "nuevo": "fe7239e51105"
+    },
+    "sprints/sprint-6/GUIA.md": {
+      "base": "326a0a9ccdae",
+      "nuevo": "b5f3b658e014"
+    },
+    "sprints/PLAN.md": {
+      "base": "6a4135c3dfb8",
+      "nuevo": "a704bfe45d76"
+    }
+  }
+}

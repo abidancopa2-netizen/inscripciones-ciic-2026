@@ -396,9 +396,14 @@ class Tester:
             r = self.api(action='verificar', dni=variante)
             self.ok('Variante con ' + ('espacios' if ' ' in variante else 'puntos' if '.' in variante else 'guion') + ' se normaliza al mismo documento',
                     r.get('tipo') == 'ok' and r.get('doc') == d, d, r.get('doc') or r.get('tipo'))
-        if d.startswith('0') and d.isdigit():
-            r = self.api(action='verificar', dni=int(d))
-            self.ok('Enviado como número pierde el 0 y la base lo recupera', r.get('doc') == d, d, r.get('doc'))
+        # El contrato solo rellena a 8 dígitos (DNI): un carné de 9 que empieza en 0 no se recupera enviado como número,
+        # y la página siempre lo manda como texto. Por eso se prueba con un DNI de 8 de la muestra, no con el primero (#47).
+        cero = next((x for x in self.muestra['1'] if len(x) == 8 and x.isdigit() and x.startswith('0')), None)
+        if cero:
+            r = self.api(action='verificar', dni=int(cero))
+            self.ok('DNI de 8 dígitos enviado como número pierde el 0 y la base lo recupera', r.get('doc') == cero, cero, r.get('doc'))
+        else:
+            self.omitir('DNI enviado como número recupera el 0', 'la muestra de la Etapa 1 no trae un DNI de 8 dígitos que empiece en 0')
 
     def c_etapas(self):
         self.seccion('C · Etapas de inscripción y de visitas (R-06, R-07)')

@@ -139,8 +139,17 @@ Regla: **todo cambio de contraseña pasa por el autenticador.** Tú solo intervi
 
 Los archivos están en tu carpeta, fuera del repositorio. No pasan por el chat. Si el padrón ya está listo, puedes adelantar los pasos 2 a 4 al 10/11 por la noche: el 11/11 solo reimportas lo nuevo, y lo que ya entró no se duplica.
 
+0. **Antes de importar, revisa el CSV en Excel** (en tu carpeta, sin subirlo a ningún chat):
+   - La columna `documento` va con formato **Texto** desde el inicio (seleccionar la columna → Formato de celdas → Texto, o importar el CSV con el asistente marcando esa columna como Texto). Si Excel la trató como número, los ceros del inicio ya se perdieron: vuelve a sacar el archivo de la fuente original, no los repongas a mano.
+   - En una columna auxiliar, `=LARGO(A2)` (o `=LEN(A2)`) y filtra:
+     - **DNI:** 8 dígitos exactos.
+     - **Solo dígitos con 6 o 7 caracteres:** sospechosos. El sistema los rellena con ceros hasta 8 **sin avisar**; eso está bien para un DNI que perdió su 0, pero no para otro documento.
+     - **Carné de extranjería, pasaporte u otro:** el largo completo del documento (por ejemplo 9). Si uno de 9 perdió su 0 queda en 8 y el sistema lo toma como DNI: esa persona escribirá sus 9 dígitos y le saldrá "no encontrado". El informe **no** lo detecta.
+     - Fuera de 6 a 12 caracteres, o sin ningún dígito: el sistema los marca como inválidos.
+   - Sin documentos repetidos (Datos → Quitar duplicados sobre la columna `documento`) y la etapa solo 1, 2 o 3.
+   - Guarda como **CSV UTF-8**. El separador puede ser `;`, coma o tabulación: el panel lo detecta solo. Abre el archivo con el Bloc de notas y mira que los documentos conserven sus ceros. Anota cuántas filas tiene, sin la cabecera.
 1. Sistema → **Respaldo**: el punto cero, con la base vacía.
-2. Sistema → **Importar padrón** (CSV documento;etapa). Lee el informe: agregados, ya existentes, conflictos e inválidos. Si algo falló, corrige el CSV y vuelve a importarlo; lo que ya entró no se duplica.
+2. Sistema → **Importar padrón** (CSV documento;etapa). Antes de pulsar Importar, el panel muestra "N filas leídas" y las 5 primeras: N debe ser lo que anotaste, y esos 5 documentos deben verse con sus ceros. Luego lee el informe: agregados, ya existentes, conflictos e inválidos. **Agregados + ya existentes + conflictos + inválidos debe dar las filas que anotaste.** Si algo falló, corrige el CSV y vuelve a importarlo; lo que ya entró no se duplica.
 3. Sistema → **Importar actividades**, con los enlaces de WhatsApp en la columna `enlace`. Lee el informe igual que el del padrón.
 4. **Revisión entre 2 personas:**
    - **Cada actividad:** nombre, tipo, fecha (16 a 21/11), horario, lugar, cupo, entrega, enlace y que esté visible.
