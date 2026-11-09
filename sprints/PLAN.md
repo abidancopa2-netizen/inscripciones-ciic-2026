@@ -146,3 +146,13 @@ Panel, tester, `instalar.py` (solo lo que muestra) y textos: no cambia la base (
 
 1. Migraciones 10 a 12 en PRODUCCIÓN (Fase 1 del Sprint 6), antes del congelamiento.
 2. Respaldo → Sistema → Pasar a producción → respaldo → tester en modo lectura → empieza el congelamiento (doc §20.1).
+
+## Sprint 6.2 · Correo institucional en la página · entregado el 08/11
+
+Pedido del ensayo (08/11, adelantado). Solo la página de inscripción y textos: sin SQL, sin `config.js`, la base sigue en `5.5-s6`.
+
+| # | Tarea |
+|---|---|
+| 6.2.1 | Pantalla 2: el campo del correo se titula "Correo institucional" con el ejemplo `nombre.apellido@estudiante.ucsm.edu.pe`. La validación no cambia: cualquier correo con formato válido (decisión del 07/11) |
+| 6.2.2 | Doc revisión 14: D15 y R-25 (la barrera real es el límite por red, #46), 2 filas de §24 y el Security Advisor como riesgo revisado y aceptado |
+| 6.2.3 | GUIA del Sprint 5 (parte D): reparto para 2 admin y 18 operadores (coordinadores por bloque, 7 parejas de grupos, 2 en el WhatsApp de contacto) y la regla "solo los admin exportan". GUIA del Sprint 6: Rate Limits de Auth en 100 cada 5 min por IP (parte 2); invitaciones por tandas y compromiso de confidencialidad antes de invitar (parte 4) |

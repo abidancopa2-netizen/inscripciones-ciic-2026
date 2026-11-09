@@ -57,6 +57,8 @@ Cómo se configuró, por si hay que repetirlo:
 | Authentication → URL Configuration | **Site URL:** `https://abidancopa2-netizen.github.io/inscripciones-ciic-2026/panel.html`. **Redirect URLs:** esa misma y, si usarás el dominio (parte 6), `https://inscripciones.viicideic.space/panel.html` |
 | Authentication → Multi-Factor | TOTP habilitado (ya estaba desde el Sprint 3) |
 
+- **Rate Limits de Auth** (08/11, en los 2 proyectos): "sign-ups and sign-ins" y "token verifications" en **100 cada 5 minutos por IP**, porque casi todo el equipo entra desde el Wi-Fi del campus (una IP por pabellón). "emails sent" sigue en 30 por hora.
+
 ## 3 · Fase 1 · lunes 09/11 · PRUEBA, prueba de ataque y PRODUCCIÓN
 
 En este orden:
@@ -91,7 +93,9 @@ Empieza cuando el ensayo terminó y PRUEBA quedó como estaba. Los pasos 1 a 3 c
       select privado.asignar_propietario('TU_CORREO');
       ```
    3. Después del paso 3 de esta parte (con el panel publicado ya en PRODUCCIÓN), entra con tu correo y esa contraseña. Registra el QR en tu autenticador como una entrada **nueva**, "CIDEIC PRODUCCIÓN", distinta de la de PRUEBA.
-5. 👤 **El equipo en PRODUCCIÓN** (10/11 por la tarde o la noche, o el 11/11 en la mañana): invita a los 6 (2 admin y 4 operadores) **después del paso 3**, porque el enlace de la invitación abre el panel publicado. Cada uno abre su enlace una vez, crea su contraseña y registra una entrada nueva "CIDEIC PRODUCCIÓN". Tú les asignas el rol en Sistema → Equipo, y cada uno comprueba que ve sus pestañas. Esto es desde el panel: se puede hacer durante el congelamiento.
+5. 👤 **El equipo en PRODUCCIÓN** (después de la Fase 2, antes del 11/11 en la mañana): invita a los **20 (2 admin y 18 operadores)** **después del paso 3**, porque el enlace de la invitación abre el panel publicado. Cada uno abre su enlace una vez, crea su contraseña y registra una entrada nueva "CIDEIC PRODUCCIÓN". Tú les asignas el rol en Sistema → Equipo, y cada uno comprueba que ve sus pestañas. Esto es desde el panel: se puede hacer durante el congelamiento.
+   - **Antes de invitar, el compromiso de confidencialidad por escrito** (08/11): cada persona firma que usa los datos (nombres, correos, celulares) solo para su tarea en el congreso, no los copia ni los comparte, no exporta listas si no es admin y no captura pantallas con datos de personas. Guarda los compromisos fuera del repositorio y del chat.
+   - **Por tandas:** el correo de Supabase admite 30 por hora, y ese cupo también lo usan las recuperaciones de contraseña. Invita primero a los 2 admin y a los 2 coordinadores, y en tandas de unas 9 personas por hora; deja unos 5 correos de margen cada hora. Si a alguien no le llega, que revise Spam antes de reenviar.
    - **Las cuentas de PRUEBA no pasan a PRODUCCIÓN:** son proyectos separados. Para cada persona son 4 cosas: tu invitación, su contraseña, su QR nuevo y el rol que le das. La invitación es lo único que tienes que mandar; lo demás lo hace ella al abrir el enlace, salvo el rol.
    - **La sesión de PRUEBA guardada en su navegador no estorba:** supabase-js guarda la sesión con una clave distinta para cada proyecto, así que el panel publicado en PRODUCCIÓN no la ve y pide entrar de nuevo. El tester lo comprueba desde el Sprint 6.1. Si alguien ve algo raro, que pulse "Salir" o abra el panel en una ventana privada.
 
@@ -276,7 +280,7 @@ Para la apertura del 11/11 a las 20:00. La hora del ensayo es la recomendada: si
 | 12:00 | **Decisión del dominio.** Lo que encontró el ensayo, a la conversación de diseño (parte 4.1) | — |
 | 12:00–16:00 | Correcciones, si hacen falta | Aplica y prueba lo que llegue |
 | 16:00 | Apruebas la vista previa | Fase 2: `configurar.py --aplicar`, push y tester de lectura con `--web` (45 min) |
-| 17:00 | Registras tu código en PRODUCCIÓN, invitas a los 6 y asignas los roles | — |
+| 17:00 | Registras tu código en PRODUCCIÓN, invitas a los 20 por tandas (con su compromiso firmado) y asignas los roles | — |
 | **20:00** | **Empieza el congelamiento.** Si el padrón está listo, puedes cargarlo esta noche desde el panel | Nada en PRODUCCIÓN, salvo la excepción de §20.1 |
 
 **Miércoles 11/11 · apertura**

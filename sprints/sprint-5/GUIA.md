@@ -11,7 +11,7 @@ Todo esto ocurre en **PRUEBA**, con la base ficticia. Las cuentas de PRUEBA no s
 
 ## B · Invitar al equipo en PRUEBA (👤, 15 minutos)
 
-Equipo: tú como propietario, **2 admin** y **4 operadores**.
+Equipo: tú como propietario, **2 admin** y **4 operadores** en el ensayo. **Para la apertura (08/11): 2 admin y 18 operadores** (21 personas con el propietario); el reparto está en la parte D.
 
 | Rol | Qué puede hacer |
 |---|---|
@@ -224,8 +224,10 @@ Orden de la apertura (detallado en la guía del Sprint 6):
 | Propietario | Operación: abrir, cerrar, límites y "Liberar red". Decide ante cualquier señal del plan de contingencia |
 | Admin 1 | La franja de arriba, "Redes con intentos fallidos", llamadas y pico en 10 s, Incidencias e Integridad. Avisa al propietario |
 | Admin 2 | Inscripciones a mano, cambios y cupos (con su llave) |
-| Operadores 1 y 2 | Solicitudes para entrar a los grupos (procedimiento 1) |
-| Operadores 3 y 4 | El WhatsApp de contacto: dudas y confirmaciones perdidas (procedimiento 2). Como el número es el tuyo, vincúlalo en sus computadoras con WhatsApp Web (Dispositivos vinculados) solo durante la apertura, o pásales tú los casos |
+| Operadores 1 y 2 · **coordinadores** | Uno por bloque (por ejemplo, visitas y talleres). Reparten los grupos entre las parejas, cubren a quien se desconecte, juntan los casos raros y los pasan al admin 2. Si ven muchas solicitudes de gente no inscrita, avisan al admin 1 |
+| Operadores 3 a 16 · **7 parejas de grupos** | Cada pareja atiende sus grupos de WhatsApp: solicitudes con el procedimiento 1 (aprobar a los inscritos, rechazar a los demás) y la marca "en el grupo" en Listas. **2 por grupo** mientras alcance; si hay más grupos que parejas, cada pareja lleva varios grupos del mismo bloque. Anoten en una tabla compartida (sin datos de personas) qué grupos lleva cada pareja |
+| Operadores 17 y 18 · **WhatsApp de contacto** | Dudas y confirmaciones perdidas (procedimiento 2, con "Copiar mensaje"). Como el número es el tuyo, vincúlalo en sus computadoras con WhatsApp Web (Dispositivos vinculados) solo durante la apertura, o pásales tú los casos. Lo que no puedan resolver, al admin 2 |
+| **Exportar listas** | Regla del equipo (08/11): **solo los admin exportan**. El panel deja exportar a los operadores, pero cada exportación queda en la bitácora con quién y cuándo; revisa esas entradas al cerrar el día |
 | Canal de avisos masivos | **Uno solo, anunciado de antemano** (por ejemplo, el canal o la comunidad de WhatsApp del CIDEIC y los delegados de cada ciclo), a cargo de una persona que no sea el propietario. La página también avisa sola: muestra "cerradas" y la cuenta regresiva de "Avisar y cerrar" |
 
 ### Plan de contingencia

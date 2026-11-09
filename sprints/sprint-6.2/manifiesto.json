@@ -1,0 +1,30 @@
+{
+  "sprint": "sprint-6.2",
+  "siguiente": "Después del 6.1 (ece0fb1): aplicar.py --verificar (5 cambian, sin conflictos), aplicar.py, instalar.py --verificar en local (Pendientes: ninguna), tester local con --web (390/390, 1 omitida), commit y push, tester de GitHub (306/306) y aviso al propietario cuando Pages publique. Sin SQL; config.js no cambia; nada en PRODUCCIÓN.",
+  "archivos": {
+    "docs/index.html": {
+      "base": "bcbdb67ce7ef",
+      "nuevo": "e57fd8df68c9"
+    },
+    "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+      "base": "80d87b966e5d",
+      "nuevo": "119daa494d6b"
+    },
+    "sprints/PLAN.md": {
+      "base": "7f9778179a14",
+      "nuevo": "6a4135c3dfb8",
+      "incorpora": "versión anterior de esta entrega (4938ce054586)",
+      "locales": [
+        "4938ce054586"
+      ]
+    },
+    "sprints/sprint-5/GUIA.md": {
+      "base": "64e63e1172af",
+      "nuevo": "f7c6ca323b9e"
+    },
+    "sprints/sprint-6/GUIA.md": {
+      "base": "477c063b789a",
+      "nuevo": "326a0a9ccdae"
+    }
+  }
+}
