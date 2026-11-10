@@ -9,9 +9,8 @@
  *  ───────────────────────────────────────────────────────────────────── */
 window.CIIC_CONFIG = {
   MODO: 'real',
-  API_URL: 'https://byfihfumsfmrswkzxuxl.supabase.co',
-  ANON_KEY: 'sb_publishable__8JRr860egHLYrTVttAsgg_rWwBgkxi',
-  PANEL_PRUEBA: false,   // Sprint 6: el panel publicado no ofrece la clave de prueba (PRODUCCIÓN)
+  API_URL: 'https://hbnrhrmndadciornanbx.supabase.co',
+  ANON_KEY: 'sb_publishable_it4qsCUK2UeX5Q5sU5WVzw_mOnF-gBW',
   NOMBRE_EVENTO: "VII Congreso Internacional de Estudiantes de Ingeniería Civil · CIDEIC",
   CONTACTO: "+51 927 457 291 (WhatsApp)",   // opcional: correo o WhatsApp de informes, p. ej. 'visitas@congreso.pe'
   // Texto completo del aviso de privacidad (sección 11.3 de la documentación). Completa los corchetes.
