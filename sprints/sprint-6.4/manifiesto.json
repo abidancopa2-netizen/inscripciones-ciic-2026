@@ -1,0 +1,34 @@
+{
+  "sprint": "sprint-6.4",
+  "siguiente": "Excepción §20.1, sobre 9d5dba3. A: aplicar.py --verificar (1 nuevo, 6 cambian), aplicar.py, tester local 399/399, ataque local 45/45, SIN commit. B: PRUEBA instalar (5.5-s6.4), tester completo desde la PC con --web de la página servida en la PC, ataque 63/63, PRUEBA cerrada. C: PRODUCCIÓN respaldo, cerrar, respaldo, instalar (5.5-s6.4), commit y push de la página, tester de lectura 18/18, prueba en vivo, abrir. Ver LEEME.",
+  "archivos": {
+    "supabase/13_sprint64_ya_inscrito.sql": {
+      "base": null,
+      "nuevo": "29ad311a56fe"
+    },
+    "docs/index.html": {
+      "base": "e57fd8df68c9",
+      "nuevo": "4aac7919a977"
+    },
+    "docs/demo/demo-api.js": {
+      "base": "747805f4fc01",
+      "nuevo": "8cfdd723fddf"
+    },
+    "tester/tester.py": {
+      "base": "fe7239e51105",
+      "nuevo": "064c4a91226c"
+    },
+    "tester/ataque.py": {
+      "base": "279f35eacd83",
+      "nuevo": "e921e7d5cd3b"
+    },
+    "documentacion/CIIC2026-inscripciones-v5.5-documentacion.md": {
+      "base": "119daa494d6b",
+      "nuevo": "e55c43a7b02e"
+    },
+    "sprints/PLAN.md": {
+      "base": "a704bfe45d76",
+      "nuevo": "f4e7b8cf9f06"
+    }
+  }
+}

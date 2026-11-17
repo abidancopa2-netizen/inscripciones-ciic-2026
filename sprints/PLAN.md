@@ -165,3 +165,15 @@ Se aplica **después de la Fase 2** y antes del congelamiento (10/11, 20:00). So
 |---|---|
 | 6.3.1 | Tester (#47): la prueba "enviado como número recupera el 0" usa un DNI de 8 dígitos de la muestra de la Etapa 1 que empiece en 0, no el primero de la lista. Si la muestra no trae ninguno, la prueba se omite con su motivo. El contrato no cambia: solo se rellena a 8 dígitos |
 | 6.3.2 | GUIA del Sprint 6, parte 5.1: revisión del CSV antes de importar (documento como Texto, largos con `LARGO`, duplicados, etapas) y cuadre de filas leídas e informe. "Importar padrón" rellena a 8 sin avisar, así que un carné que perdió su 0 no se detecta en el informe |
+
+## Sprint 6.4 · Ya inscrito: ver tus grupos · entregado el 17/11
+
+**Excepción §20.1 durante el congreso, decidida por el propietario** (cuentas de WhatsApp del equipo bloqueadas por agregar personas a mano; los inscritos no podían volver a ver su enlace). **Cambio de contrato aprobado** (R-16 y R-31). Migración 13, versión `5.5-s6.4`. Orden: primero el SQL en PRODUCCIÓN y después la página, para que nunca haya una página nueva con el SQL anterior.
+
+| # | Tarea |
+|---|---|
+| 6.4.1 | Migración 13: `privado.ya_inscrito` y `privado.duplicado`. `verificar` con un documento que tiene una inscripción CONFIRMADA responde `duplicado` con `yaInscrito`, `doc`, `etapa` y `actividades` (id, tipo, nombre, fecha, inicio, fin, lugar, grupoModo, grupo solo si es ENLACE). Nunca código, celular, correo ni nombre. Las anuladas no cuentan. También con las inscripciones cerradas. El texto del aviso no cambia; `registrar` sigue con el aviso solo. `verificar`, `registrar` y `public.api` no cambian |
+| 6.4.2 | Página: la pantalla 3 en modo consulta, "Ya estás inscrito. Estos son tus grupos", con el botón "Unirme al grupo" (ENLACE) o un texto sin el número (MANUAL) y "Puedes volver a consultar tus grupos cuando quieras". Si `registrar` responde "duplicado", vuelve a verificar y muestra los grupos |
+| 6.4.3 | Tester: D, L, S y P actualizados (9 pruebas nuevas: consulta por API y en el navegador, MANUAL sin celular, mismo enlace, cerrada, anulada). Modo lectura: la página publicada trae la consulta y la base está en `5.5-s6.4` o posterior. Ataque: bloque 4 con la consulta sin datos personales y una nota del riesgo aceptado. `demo-api.js` igual que la base. Documentación revisión 15 (D1, R-01, R-16, R-31, 10.2, 10.5, 13, 17, 18, 18.3, 22) |
+
+**Criterios:** local desde cero y actualizando desde `5.5-s6` (con y sin inscripciones) **399/399, 1 omitida**; ataque local **45/45**; PRUEBA con el tester completo desde la PC en verde; PRODUCCIÓN con `instalar.py --verificar` en `5.5-s6.4`, integridad OK y tester de lectura en verde (incluida "Página publicada con la consulta").

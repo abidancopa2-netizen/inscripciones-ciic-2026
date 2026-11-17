@@ -41,6 +41,9 @@ import requests
 RAIZ = Path(__file__).resolve().parent.parent
 NOMBRE = 'TEST Tester Automático'
 NOMBRES, APELLIDOS = 'Persona', 'De Prueba Tester'
+# Sprint 6.4: lo único que puede traer "duplicado" al verificar un documento inscrito, y lo de cada actividad
+YA_INSCRITO = {'ok', 'tipo', 'mensaje', 'yaInscrito', 'doc', 'etapa', 'actividades'}
+YA_INSCRITO_ACT = {'id', 'tipo', 'nombre', 'fecha', 'inicio', 'fin', 'lugar', 'grupoModo', 'grupo'}
 VERDE, ROJO, AMARILLO, GRIS, AZUL, FIN = '\033[32m', '\033[31m', '\033[33m', '\033[90m', '\033[34m', '\033[0m'
 
 
@@ -456,7 +459,9 @@ class Tester:
         self.ok('El nombre se guarda sin fórmula al inicio (CSV seguro)', b['registros'] and not b['registros'][0]['nombre'].startswith('='), 'sin =', b['registros'] and b['registros'][0]['nombre'])
         ap_ = b['registros'][0].get('apellidos', '') if b['registros'] else ''
         self.ok('Los apellidos se guardan sin caracteres invisibles ni de dirección (Sprint 6)', ap_ == 'QuispeRojas', 'QuispeRojas', repr(ap_))
-        self.tipo('Volver a verificar → duplicado (solo el aviso, R-31)', self.api(action='verificar', dni=d), 'duplicado')
+        v = self.api(action='verificar', dni=d)
+        self.ok('Volver a verificar → duplicado con sus 2 actividades (Sprint 6.4)', v.get('tipo') == 'duplicado' and v.get('yaInscrito') is True and len(v.get('actividades', [])) == 2,
+                'duplicado · 2', f"{v.get('tipo')} · {len(v.get('actividades', []))}")
         self.tipo('Registrar otra vez → duplicado', self.reg(d, [v1['id'], t2['id']]), 'duplicado')
 
     def e_cupos(self):
@@ -749,10 +754,19 @@ class Tester:
         self.ok('El comprobante trae grupoModo y grupo de sus actividades', all('grupoModo' in a and 'grupo' in a for a in r.get('actividades', [])), 'ambos', '')
         a0 = self.acts()[ids[0]]
         self.tipo('Cambiar la entrega a MANUAL (abierto)', self.panel('panel_editar', id=ids[0], grupoModo='MANUAL'), 'panel')
-        r2 = self.reg(self.tomar(1), ids)
+        d2 = self.tomar(1)
+        r2 = self.reg(d2, ids)
         x = ([a for a in r2.get('actividades', []) if a['id'] == ids[0]] or [{}])[0]
         self.ok('Con entrega MANUAL, la confirmación no trae enlace y sí el celular', x.get('grupoModo') == 'MANUAL' and x.get('grupo') is None and str(r2.get('celular', '')).startswith('+51'),
                 'MANUAL · null · +51…', f"{x.get('grupoModo')} · {x.get('grupo')} · {r2.get('celular')}")
+        v = self.api(action='verificar', dni=d2)
+        y = ([a for a in v.get('actividades', []) if a['id'] == ids[0]] or [{}])[0]
+        z = ([a for a in v.get('actividades', []) if a['id'] == ids[1]] or [{}])[0]
+        w = ([a for a in r2.get('actividades', []) if a['id'] == ids[1]] or [{}])[0]
+        self.ok('Ya inscrito con entrega MANUAL: sin enlace y sin el celular (Sprint 6.4)', y.get('grupoModo') == 'MANUAL' and y.get('grupo') is None and 'celular' not in v,
+                'MANUAL · null · sin celular', f"{y.get('grupoModo')} · {y.get('grupo')} · {'celular' in v}")
+        self.ok('Ya inscrito con entrega ENLACE: el mismo enlace de la confirmación (Sprint 6.4)', z.get('grupoModo') == w.get('grupoModo') and z.get('grupo') == w.get('grupo'),
+                w.get('grupo'), z.get('grupo'))
         self.panel('panel_editar', id=ids[0], grupoModo=a0['grupoModo'])
         v = self.panel('panel_verificar_celular', id=ids[0], celular='+51 ' + self.celular(d))
         self.ok('Verificar solicitud: celular inscrito en esa actividad', v.get('inscrito') is True, True, v.get('inscrito'))
@@ -851,11 +865,26 @@ class Tester:
         self.ok('registrado trae documento, etapa, celular y 2 actividades', r.get('doc') == d and r.get('etapa') == 1 and str(r.get('celular', '')).startswith('+51') and len(r.get('actividades', [])) == 2,
                 'doc · etapa · celular · 2', {k: r.get(k) for k in ('doc', 'etapa', 'celular')})
         v = self.api(action='verificar', dni=d)
-        self.ok('duplicado solo trae el aviso (ok, tipo, mensaje)', v.get('tipo') == 'duplicado' and set(v) <= {'ok', 'tipo', 'mensaje'} and 'CIIC-' not in v.get('mensaje', ''), 'ok · tipo · mensaje', sorted(v))
+        acts_v = v.get('actividades', [])
+        self.ok('Verificar un inscrito → duplicado con sus grupos (Sprint 6.4)', v.get('tipo') == 'duplicado' and v.get('yaInscrito') is True and v.get('doc') == d and v.get('etapa') == 1
+                and sorted(a.get('id') for a in acts_v) == sorted(ids), 'duplicado · doc · etapa · 2', {k: v.get(k) for k in ('tipo', 'doc', 'etapa')})
+        self.ok('Ya inscrito: sin código, celular, correo ni nombre (R-31, Sprint 6.4)', set(v) <= YA_INSCRITO and all(set(a) <= YA_INSCRITO_ACT for a in acts_v)
+                and 'CIIC-' not in json.dumps(v) and '@' not in json.dumps(v) and self.celular(d) not in json.dumps(v), 'solo lo permitido', sorted(set(v) - YA_INSCRITO))
+        self.ok('Ya inscrito: cada actividad con nombre, tipo, fecha, horario y lugar', all(a.get('nombre') and a.get('tipo') in ('VISITA', 'TALLER') and a.get('fecha')
+                and a.get('inicio') and a.get('fin') and a.get('lugar') and a.get('grupoModo') in ('ENLACE', 'MANUAL') for a in acts_v), 'completas', '')
+        self.cerrar()
+        c = self.api(action='verificar', dni=d)
+        self.ok('Ya inscrito con las inscripciones cerradas: igual ve sus grupos (Sprint 6.4)', c.get('tipo') == 'duplicado' and len(c.get('actividades', [])) == 2, 'duplicado · 2',
+                f"{c.get('tipo')} · {len(c.get('actividades', []))}")
+        self.abrir()
         x = self.reg(d, ids)
-        self.ok('registrar otra vez: duplicado igual de mudo', x.get('tipo') == 'duplicado' and set(x) <= {'ok', 'tipo', 'mensaje'}, 'ok · tipo · mensaje', sorted(x))
+        self.ok('registrar otra vez: duplicado mudo (la página vuelve a verificar)', x.get('tipo') == 'duplicado' and set(x) <= {'ok', 'tipo', 'mensaje'}, 'ok · tipo · mensaje', sorted(x))
         p = self.inscribir_panel(d, ids)
         self.ok('En el panel, duplicado sí trae el código (para soporte)', p.get('tipo') == 'duplicado' and str(p.get('codigo', '')).startswith('CIIC-'), 'CIIC-…', p.get('codigo'))
+        cod = self.codigo_de(d)
+        self.tipo('Anular la inscripción (panel)', self.panel('panel_anular', codigo=cod), 'panel')
+        a = self.api(action='verificar', dni=d)
+        self.ok('Anulada: ya no cuenta como inscrito, sigue el flujo normal (Sprint 6.4)', a.get('tipo') == 'ok' and 'yaInscrito' not in a, 'ok', a.get('tipo'))
 
     def x_incidencias(self):
         self.seccion('X · Incidencias (R-36)')
@@ -1726,8 +1755,15 @@ class Tester:
                 pg.click('#btn-inicio')
                 pg.fill('#doc', d)
                 pg.click('#btn-verificar')
-                pg.wait_for_selector('#msg-1 [data-tipo="duplicado"]', timeout=15000)
-                self.ok('Página: el mismo documento → solo el aviso de ya inscrito', 'CIIC-' not in pg.inner_text('#msg-1'), 'sin datos', '')
+                pg.wait_for_selector('[data-pantalla="3"]:not([hidden]) #comprobante[data-modo="consulta"]', timeout=15000)
+                txt = pg.inner_text('[data-pantalla="3"]')
+                n_act = pg.locator('#comprobante [data-actividad]').count()
+                self.ok('Página: el mismo documento → "Ya estás inscrito" con sus 2 actividades (Sprint 6.4)', 'Ya estás inscrito' in txt and n_act == 2 and pg.locator('#comprobante [data-grupo]').count() == 2,
+                        '2 con su grupo', n_act)
+                self.ok('Página: la consulta no muestra código, celular, correo ni nombre', 'CIIC-' not in txt and self.celular(d) not in txt.replace(' ', '') and NOMBRES not in txt and '@' not in txt,
+                        'sin datos', '')
+                pg.screenshot(path=str(fotos / '03b-ya-inscrito.png'), full_page=True)
+                pg.click('#btn-inicio')
                 d2 = self.tomar(1)
                 pg.fill('#doc', d2)
                 pg.click('#btn-verificar')
@@ -1736,6 +1772,11 @@ class Tester:
                 pg.evaluate('document.dispatchEvent(new Event("visibilitychange"))')
                 pg.wait_for_selector('[data-pantalla="1"]:not([hidden]) [data-tipo="cerrado"]', timeout=15000)
                 self.ok('Página: al cerrar mientras elige, vuelve al inicio con "cerrado"', True)
+                pg.fill('#doc', d)
+                pg.click('#btn-verificar')
+                pg.wait_for_selector('[data-pantalla="3"]:not([hidden]) #comprobante[data-modo="consulta"]', timeout=15000)
+                self.ok('Página: con las inscripciones cerradas, el inscrito igual ve sus grupos (Sprint 6.4)', True)
+                pg.click('#btn-inicio')
                 self.abrir()
                 pg.fill('#doc', '00000001')
                 pg.click('#btn-verificar')
@@ -2276,12 +2317,15 @@ class Tester:
                 if pagina == 'panel.html':
                     visible = pg.evaluate("(() => { const x = document.getElementById('paso-prueba'); return !!x && !x.hidden && x.offsetParent !== null; })()")
                     self.ok('Panel publicado sin "Entrar con la clave de prueba"', not visible, 'oculto', 'visible' if visible else 'oculto')
+                else:          # Sprint 6.4: la página publicada ya trae la consulta "Ya estás inscrito"
+                    nueva = pg.evaluate("!!document.getElementById('paso-3')")
+                    self.ok('Página publicada con la consulta "Ya estás inscrito" (Sprint 6.4)', nueva, 'sí', 'sí' if nueva else 'no: página anterior')
             finally:
                 ctx.close()
             self.ok(f'{pagina} publicada llama solo al proyecto de --api ({esperado.split(".")[0][:4]}…)', hosts == {esperado},
                     esperado.split('.')[0][:4] + '…', sorted(h.split('.')[0][:4] + '…' for h in hosts) or 'ninguna llamada')
         v = str(self.cli.llamar({}).get('version', ''))          # la acción vacía devuelve la versión del backend
-        self.ok('El proyecto de --api tiene las migraciones del Sprint 6 (5.5-s6 o posterior)', v >= '5.5-s6', '5.5-s6', v)
+        self.ok('El proyecto de --api tiene las migraciones del Sprint 6.4 (5.5-s6.4 o posterior)', v >= '5.5-s6.4', '5.5-s6.4', v)
 
     def reporte(self, error, dur):
         pasan = sum(1 for r in self.res if r['ok'] is True)

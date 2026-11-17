@@ -1,10 +1,10 @@
 # Sistema de inscripciones CIIC 2026 · v5.5 · Documentación técnica completa
 
-Fecha: 08-11-2026 · Revisión 14 (Sprint 6.2) · Contrato **v5.5 final**. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
+Fecha: 17-11-2026 · Revisión 15 (Sprint 6.4) · Contrato **v5.5 final**, con el cambio de "ya inscrito" del Sprint 6.4. Acompaña a la lámina **INS-07 · Contrato v5.3** (los cambios de la v5.4 y la v5.5 están solo en este documento) y al paquete `inscripciones-ciic-v5.5` (páginas en v5.5, base construida en v5.1 que los sprints llevan a v5.5).
 
 Este documento describe cada pieza del sistema: qué es, qué hace, qué datos recibe y entrega, y qué reglas cumple. Es la referencia para programar, probar, operar y auditar. Los HTML, el SQL y el tester se construyen contra él, por sprints (sección 23).
 
-La revisión 14 (Sprint 6.2) cambia el título y el ejemplo del correo en la página ("Correo institucional", sin cambiar la validación), corrige D15 y R-25 (la barrera real es el límite por red, #46), actualiza 2 filas de §24 y agrega el Security Advisor como riesgo revisado y aceptado (§24). La revisión 13 (Sprint 6.1) agrega la recuperación de contraseña con autenticador y la sesión guardada de otro proyecto (12.5), la contraseña o el celular perdidos sin SQL (12.6), la revocación de la contraseña de aplicación del correo de Supabase (19.8), la decisión de permitir 2 talleres aunque queden visitas (24) y la configuración que muestra `instalar.py --verificar`; no cambia el contrato ni la base. La revisión 12 (Sprint 6) agrega la apertura: fechas reales (congreso del 16 al 21/11, Etapa 1 abre el 11/11, borrado a más tardar el 19/02/2027), `config.js` hacia PRODUCCIÓN sin la clave de prueba en el panel (R-37), textos sin caracteres invisibles (R-47, migración 11), limpieza de intentos con pg_cron cada 5 minutos (R-25, migración 12), congelamiento desde el 10/11 a las 20:00 (20.1), panel que no se deja enmarcar, "Copiar mensaje" y la prueba de ataque (22). La revisión 11 (Sprint 5.1) agrega las redes con intentos fallidos en el panel (R-46), la limpieza de intentos al terminar su ventana (R-25), la fuente alojada en `docs/tema/fuentes/` y el aviso de privacidad corregido (11.3). La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
+La revisión 15 (Sprint 6.4, 17/11, excepción §20.1 aprobada por el propietario) **cambia el contrato de "ya inscrito"**: con solo el documento, `verificar` devuelve las actividades y los grupos de la inscripción CONFIRMADA, sin código, nombre, correo ni celular, para que cada persona pueda volver a ver sus grupos cuando quiera. Cambian el principio "Sin datos por DNI", D1, R-01, R-16, R-31, 10.2, 10.5, 13, 17, 18 y el bloque S del tester; la versión de la base pasa a `5.5-s6.4` (migración 13). La revisión 14 (Sprint 6.2) cambia el título y el ejemplo del correo en la página ("Correo institucional", sin cambiar la validación), corrige D15 y R-25 (la barrera real es el límite por red, #46), actualiza 2 filas de §24 y agrega el Security Advisor como riesgo revisado y aceptado (§24). La revisión 13 (Sprint 6.1) agrega la recuperación de contraseña con autenticador y la sesión guardada de otro proyecto (12.5), la contraseña o el celular perdidos sin SQL (12.6), la revocación de la contraseña de aplicación del correo de Supabase (19.8), la decisión de permitir 2 talleres aunque queden visitas (24) y la configuración que muestra `instalar.py --verificar`; no cambia el contrato ni la base. La revisión 12 (Sprint 6) agrega la apertura: fechas reales (congreso del 16 al 21/11, Etapa 1 abre el 11/11, borrado a más tardar el 19/02/2027), `config.js` hacia PRODUCCIÓN sin la clave de prueba en el panel (R-37), textos sin caracteres invisibles (R-47, migración 11), limpieza de intentos con pg_cron cada 5 minutos (R-25, migración 12), congelamiento desde el 10/11 a las 20:00 (20.1), panel que no se deja enmarcar, "Copiar mensaje" y la prueba de ataque (22). La revisión 11 (Sprint 5.1) agrega las redes con intentos fallidos en el panel (R-46), la limpieza de intentos al terminar su ventana (R-25), la fuente alojada en `docs/tema/fuentes/` y el aviso de privacidad corregido (11.3). La revisión 10 (Sprint 5) agrega el aviso de privacidad final (11.3), el tema CIDEIC aparte del contrato (`docs/tema/`, ver `docs/LEEME-DISENO.md` §2.1) y las decisiones del 06/11 (24). La revisión 9 (Sprint 4.1) agrega el ensayo de "Pasar a producción" y "Vaciar" por la API real (21.3) y el respaldo guardado tal como lo da la base (19.3, 19.5). La revisión 8 documenta cómo quedaron construidos, en el Sprint 4, el tráfico (15.14), el respaldo y la restauración (19.3 a 19.5, 21.3) y el inicio de sesión del panel con un enlace ya usado (12.5); no cambia el contrato. La revisión 7 agrega, sin cambiar nada de lo anterior, las decisiones D23 a D25: vaciar los datos de prueba e importar actividades desde el panel, para pasar de la base ficticia a la real sin SQL (sección 19.7), y la base ficticia generada (sección 21.2). La revisión 6 cerró el contrato con las decisiones D15 a D22 (sección 2): la segunda auditoría (sección 3.2), el plan gratuito sin copias automáticas con un respaldo manual desde el panel (sección 19), la protección contra borrados y cambios masivos, las reglas para cambiar el SQL, también para asistentes de IA (sección 20), y las herramientas del panel para no tener que tocar SQL durante el congreso.
 
 Las marcas **[v5.2]**, **[v5.3]**, **[v5.4]** y **[v5.5]** indican en qué versión del contrato cambió cada punto respecto de lo construido en la v5.1. Lo que no tiene marca ya funciona así en el código construido.
 
@@ -49,7 +49,7 @@ Tres principios ordenan todo el diseño:
 
 | Principio | Qué significa | Dónde se aplica |
 |---|---|---|
-| **Sin datos por DNI** [v5.2] | Con solo un documento nunca se devuelve nada de una inscripción existente: solo "ya inscrito". | Verificar, inscribir |
+| **Sin datos personales por DNI** [v5.2, Sprint 6.4] | Con solo un documento nunca se devuelve código, nombre, correo ni celular de una inscripción. Desde el Sprint 6.4, sí sus actividades y grupos ("Ya estás inscrito. Estos son tus grupos"). | Verificar, inscribir |
 | **Una sola puerta** | Toda lectura y escritura pasa por la función `public.api(p)`. Las tablas están cerradas a la clave pública. | Base de datos |
 | **Agregar en vivo, quitar cerrado** | Los cambios que agregan opciones se aplican con el sistema abierto. Los que quitan opciones exigen cerrar las inscripciones. | Todas las acciones del panel |
 | **La ronda ordena el tiempo** | Cada cierre sube un contador llamado ronda: el número de edición del sistema. Una página que verificó en una ronda anterior no puede confirmar: vuelve al inicio. | Verificar, inscribir, página |
@@ -60,7 +60,7 @@ Tres principios ordenan todo el diseño:
 
 | # | Decisión | Definición | Efecto en el contrato |
 |---|---|---|---|
-| D1 | Qué ve quien conoce un DNI inscrito | Solo "ya inscrito". No hay comprobantes. La confirmación se muestra una sola vez, sin código | `duplicado` sin datos; `registrado` sin `codigo` |
+| D1 | Qué ve quien conoce un DNI inscrito | [Sprint 6.4] Sus actividades y grupos, sin código, nombre, correo ni celular (antes: solo "ya inscrito"). La confirmación con el celular se muestra una sola vez, sin código | Al verificar, `duplicado` con `yaInscrito`, `doc`, `etapa` y `actividades`; `registrado` sin `codigo` |
 | D2 [v5.3] | Etapa por persona | **Una sola y fija.** `documento` es la clave del padrón; ninguna acción cambia la etapa. Si se cargó mal: quitar (sin inscripción, con el sistema cerrado) y volver a agregar | `panel_padron_agregar` → `ya_existe` si el documento existe |
 | D3 | Refresco | Una sola llamada: `estado` con `conActividades: true` | Campo nuevo |
 | D4 | Idempotencia | `solicitud` en toda escritura; el panel envía el cupo final | `solicitud`, `repetida`, `solicitud_repetida`; sin `delta` |
@@ -168,7 +168,7 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 - **Qué dice:** un documento tiene como máximo una inscripción en estado CONFIRMADO. Vale para la página y para el panel.
 - **Por qué:** evita que una persona ocupe cuatro cupos.
 - **Dónde:** índice único parcial `un_confirmado_por_documento` en `inscripciones`.
-- **Si falla:** [v5.4] `duplicado` con un único mensaje, "Este documento ya está inscrito"; nunca código, actividades ni enlaces (R-31).
+- **Si falla:** [v5.4] `duplicado` con el mensaje "Este documento ya está inscrito"; nunca código ni datos personales. [Sprint 6.4] Al verificar, trae además sus actividades y grupos (R-31); al registrar, solo el aviso.
 - **Quién la cambia:** nadie (fija).
 
 ### R-02 · Combinación de 2 actividades
@@ -244,8 +244,10 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 ### R-15 · Celular repetido
 - **Qué dice:** se permite (hermanos, padres), pero el Panel 1 lo lista para revisar.
 
-### R-16 · Enlace del grupo
-- **Qué dice:** [v5.2] el enlace de WhatsApp solo aparece en la confirmación, una sola vez, a quien se acaba de inscribir en esa actividad. Nunca por DNI ni en la lista pública.
+### R-16 · Enlace del grupo [cambia en el Sprint 6.4]
+- **Qué dice:** el enlace de WhatsApp aparece en la confirmación a quien se acaba de inscribir en esa actividad y, [Sprint 6.4] cada vez que esa persona vuelve a verificar su documento, en la pantalla "Ya estás inscrito. Estos son tus grupos" (R-31). Nunca en la lista pública ni a quien no está inscrito en esa actividad. Con entrega MANUAL no hay enlace y la consulta no muestra el celular.
+- **Por qué cambió (17/11):** varias cuentas de WhatsApp del equipo quedaron bloqueadas por agregar personas a mano, y los inscritos no podían volver a ver su enlace. El propietario aprobó el cambio de contrato (excepción §20.1).
+- **Riesgo aceptado:** quien conozca un DNI inscrito ve los enlaces de sus grupos. Entrar al grupo sigue pidiendo la aprobación del moderador, que comprueba el celular en el panel (10.2, 10.3).
 
 ### R-17 · Quitar una actividad
 - **Qué dice:** solo si está oculta y sin inscritos.
@@ -314,10 +316,11 @@ Cada regla indica qué dice, por qué existe, dónde se valida, qué responde si
 
 ---
 
-### R-31 · Sin comprobantes [v5.2]
-- **Qué dice:** con solo el DNI nunca se devuelve código, actividades ni enlaces de una inscripción existente. `verificar` y `registrar` responden `duplicado` con un único mensaje.
-- **Por qué:** cualquiera que conozca un DNI podría ver la inscripción de otra persona.
-- **Dónde:** `api()`.
+### R-31 · Sin comprobantes [v5.2, cambia en el Sprint 6.4]
+- **Qué dice:** con solo el DNI nunca se devuelve el código, el nombre, el correo ni el celular de una inscripción. [Sprint 6.4] `verificar` con un documento que tiene una inscripción **CONFIRMADA** responde `duplicado` con `yaInscrito: true`, `doc`, `etapa` y `actividades` (por cada una: `id`, `tipo`, `nombre`, `fecha`, `inicio`, `fin`, `lugar`, `grupoModo` y `grupo`, este solo con entrega ENLACE). Las anuladas no cuentan: quien solo tiene una anulada sigue el flujo normal. Responde también con las inscripciones cerradas (la revisión de "ya inscrito" va antes que la de "cerrado") y no gasta intentos. `registrar` sigue respondiendo solo el aviso; la página, en ese caso, vuelve a verificar.
+- **Por qué:** [v5.2] para que nadie viera la inscripción de otra persona. [Sprint 6.4] El propietario aceptó mostrar actividades y grupos: los DNI, nombres y apellidos ya están publicados en las puertas del coliseo, la directiva planeaba publicar todos los enlaces, y las cuentas de WhatsApp del equipo quedaron bloqueadas.
+- **Riesgo aceptado (Sprint 6.4):** quien conozca un DNI inscrito ve qué actividades eligió esa persona (fecha, horario y lugar) y sus enlaces. Esas consultas no cuentan para los límites: contarlas bloquearía la red del coliseo con la gente legítima (18.3).
+- **Dónde:** `privado.duplicado` y `privado.ya_inscrito` (migración 13), que usa `verificar`.
 
 ### R-32 · Idempotencia [v5.2]
 - **Qué dice:** cada escritura (inscribir y toda acción del panel que cambie algo) lleva `solicitud`. La base guarda su huella y su respuesta. El mismo reenvío con los mismos datos recibe la misma respuesta con `repetida: true` y no repite el cambio. La misma `solicitud` con otros datos recibe `solicitud_repetida`.
@@ -607,7 +610,7 @@ Un enlace de invitación se puede reenviar, y eso no se puede impedir. Lo que s�
 | 1 | Aprobar nuevos participantes | En cada grupo: Ajustes del grupo → Aprobar nuevos participantes → Activado. Quien use el enlace solo puede pedir entrar; los administradores aprueban o rechazan en Participantes pendientes | WhatsApp |
 | 2 | Lista de la actividad [v5.3] | Panel 3 → Listas: eliges la actividad y ves a todos sus inscritos con su número. Para una solicitud, buscas el número: si aparece, apruebas y marcas "en el grupo"; si no, rechazas | Panel 3 · `panel_lista`, `panel_grupo_marcar` |
 | 3 | Entrega a mano | Por actividad, `grupo_modo = MANUAL`: la confirmación no muestra enlace y dice con qué número se le agregará. En Listas están los números por agregar para copiarlos o bajarlos en .vcf | Panel 3 · Listas |
-| 4 | Enlace visible una sola vez y restablecible | R-16 y R-31: aparece solo en la confirmación; nunca por DNI. Si se filtra: en WhatsApp "Restablecer enlace" y pegar el nuevo en el Panel 3 (sin cerrar) | Base · Panel 3 |
+| 4 | Enlace restablecible [Sprint 6.4] | R-16 y R-31: aparece en la confirmación y cada vez que la persona verifica su documento. Si se filtra: en WhatsApp "Restablecer enlace" y pegar el nuevo en el Panel 3 (sin cerrar); los inscritos ven el nuevo al volver a verificar | Base · Panel 3 |
 
 ### 10.3 `panel_verificar_celular`
 
@@ -631,7 +634,7 @@ Un enlace de invitación se puede reenviar, y eso no se puede impedir. Lo que s�
 
 ### 10.5 Confirmación perdida [Sprint 5]
 
-La página no vuelve a mostrar una confirmación (R-31). La reenvía el equipo por WhatsApp, después de comprobar que quien escribe es la persona inscrita: se busca en el panel por el **número desde el que escribe**, no por el documento que dice. Si no coincide, no se le da nada; si ya no tiene ese número, un admin lo atiende por el correo con el que se inscribió. Paso a paso, en `sprints/sprint-5/GUIA.md` (parte C, procedimientos).
+[Sprint 6.4] La persona vuelve a ver sus grupos escribiendo su documento en la página: "Ya estás inscrito. Estos son tus grupos", sin código ni datos personales (R-31). El equipo ya no reenvía enlaces. Si necesita algo más que sus grupos (por ejemplo, el celular registrado para una entrega MANUAL), lo atiende el equipo como antes. Antes del Sprint 6.4: la página no volvía a mostrar una confirmación (R-31) y la reenviaba el equipo por WhatsApp, después de comprobar que quien escribe es la persona inscrita: se busca en el panel por el **número desde el que escribe**, no por el documento que dice. Si no coincide, no se le da nada; si ya no tiene ese número, un admin lo atiende por el correo con el que se inscribió. Paso a paso, en `sprints/sprint-5/GUIA.md` (parte C, procedimientos).
 
 Para que "Verificar una solicitud" sirva, cada grupo debe tener activado **Aprobar nuevos participantes** y quienes aprueban deben ser administradores del grupo y tener cuenta en el panel.
 
@@ -818,7 +821,7 @@ Toda respuesta es JSON con `ok`, `tipo` y `mensaje`. Si no trae `tipo` ni `ok`, 
 | `verificar` con `ok: true` | `doc`, `etapa`, `puedeVisita`, `ronda`, `mensaje`, `actividades` |
 | Cada actividad | `id`, `tipo`, `nombre`, `lugar`, `fecha` (dd/mm/aaaa), `inicio`, `fin` (hh:mm), `descripcion`, `capacidad`, `inscritos`, `disponibles`, `lleno`, `cruzaCon` (IDs con los que no se puede combinar el mismo día; vacío con "una por día") |
 | `registrado` [v5.2] | `doc`, `etapa`, `celular` [v5.3] (el que escribió, para "te agregaremos con tu número"), `actividades` (cada una con `grupoModo` y `grupo`), `mensaje`, `repetida` si es la respuesta guardada de un reenvío. Sin `codigo` |
-| `duplicado` [v5.2] | Solo `mensaje`: "Este documento ya está inscrito." Ningún dato |
+| `duplicado` [v5.2, Sprint 6.4] | Al verificar: `mensaje`, `yaInscrito: true`, `doc`, `etapa` y `actividades` (cada una: `id`, `tipo`, `nombre`, `fecha`, `inicio`, `fin`, `lugar`, `grupoModo`, `grupo`). Al registrar: solo `mensaje`. Nunca código, nombre, correo ni celular |
 | `error_servidor` [v5.2] | `incidencia` (número para soporte) y mensaje genérico |
 | `solicitud_repetida` [v5.2] | La misma `solicitud` con otros datos: generar una nueva y reenviar |
 | `formato`, `no_encontrado` | `intentosRestantes` |
@@ -851,7 +854,7 @@ Toda respuesta es JSON con `ok`, `tipo` y `mensaje`. Si no trae `tipo` ni `ok`, 
 | 2 | Cerrado mientras elegía | `estado.abierto = false` o `cerrado` | Pantalla 1: "Tu elección no se guardó" |
 | 2 | Sin conexión al confirmar | Sin red | "Tu elección no se ha enviado"; se mantiene la selección |
 | 2 | Regla rota | `combinacion_invalida`, `lleno`, `visita_no_habilitada`… | Mensaje; quitar la elección en conflicto |
-| 1 | Ya inscrito [v5.2] | `duplicado` | Solo el aviso "este documento ya está inscrito", sin datos |
+| 1 → 3 | Ya inscrito [Sprint 6.4] | `duplicado` con `actividades` | Pantalla 3 en modo consulta: "Ya estás inscrito. Estos son tus grupos", documento, etapa, actividades con fecha, horario y lugar, botón "Unirme al grupo" (ENLACE) o texto sin el número (MANUAL), y "Puedes volver a consultar tus grupos cuando quieras". Sin `actividades` (registrar): vuelve a verificar |
 | 3 · Confirmación [v5.2] | Confirmado | `registrado` | Una sola vez, sin código: actividades, información, botones de grupo y el aviso "entra ahora a tus grupos o toma una captura" |
 | 3 | Con enlace | `grupoModo = ENLACE` y `grupo` | Botón "Unirme al grupo" y "Un administrador aprobará tu ingreso" |
 | 3 | Entrega a mano | `grupoModo = MANUAL` | [v5.3] "La organización te agregará al grupo con tu número {celular}. Si no es correcto, escríbenos." |
@@ -896,7 +899,14 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
  "actividades": [{"id": "VIS01", "grupo": "https://chat.whatsapp.com/…", "...": "..."}, {"id": "TAL05", "...": "..."}],
  "mensaje": "Inscripción confirmada."}
 
-// ya inscrito (verificar o registrar)
+// ya inscrito al verificar [Sprint 6.4]: sus grupos, sin código ni datos personales
+{"ok": false, "tipo": "duplicado", "mensaje": "Este documento ya está inscrito. Si necesitas ayuda, escríbenos.",
+ "yaInscrito": true, "doc": "04567812", "etapa": 1,
+ "actividades": [{"id": "VIS01", "tipo": "VISITA", "nombre": "…", "fecha": "12/11/2026", "inicio": "08:00", "fin": "12:00", "lugar": "…",
+                  "grupoModo": "ENLACE", "grupo": "https://chat.whatsapp.com/…"},
+                 {"id": "TAL07", "tipo": "TALLER", "...": "...", "grupoModo": "MANUAL", "grupo": null}]}
+
+// ya inscrito al registrar (solo el aviso; la página vuelve a verificar)
 {"ok": false, "tipo": "duplicado", "mensaje": "Este documento ya está inscrito. Si necesitas ayuda, escríbenos."}
 ```
 
@@ -1313,7 +1323,7 @@ Formato del pedido: `{"p": {"action": "...", ...}}`. [v5.2] Toda escritura revis
 | `ok` | Documento verificado | ver 8.3 | Pantalla 2 |
 | `registrado` | Inscripción guardada | ver 8.3 | Pantalla 3 |
 | `panel` | Acción del panel correcta | según la acción | Actualiza |
-| `duplicado` | Ya tiene inscripción | Ninguno [v5.2] | Pantalla 1: aviso "ya inscrito" |
+| `duplicado` | Ya tiene inscripción | [Sprint 6.4] Al verificar: `yaInscrito`, `doc`, `etapa`, `actividades`. Al registrar: ninguno | Pantalla 3 "Ya estás inscrito" (al registrar, la página vuelve a verificar) |
 | `formato` | Documento mal escrito | `intentosRestantes` | Mensaje |
 | `no_encontrado` | Fuera del padrón (o código inexistente en el panel) | `intentosRestantes` | Mensaje |
 | `demasiados_intentos` | R-25 | `motivo`, `esperaMinutos` | Mensaje; no reintentar |
@@ -1365,7 +1375,7 @@ Formato del pedido: `{"p": {"action": "...", ...}}`. [v5.2] Toda escritura revis
 | Cuentas creadas por extraños | Registro abierto desactivado; solo invitados; sin rol no ven nada | Supabase Auth |
 | Ex integrante del equipo | Desactivar en Equipo | Panel |
 | Sesión robada sin código | `api()` exige nivel `aal2` (contraseña + código) | Base |
-| Ver la inscripción de otro con su DNI [v5.2] | No hay comprobantes: solo "ya inscrito" (R-31) | `api()` |
+| Ver la inscripción de otro con su DNI [v5.2, Sprint 6.4] | Nunca código, nombre, correo ni celular. Desde el Sprint 6.4 sí se ven sus actividades y grupos (R-31, riesgo aceptado en 18.3) | `api()` |
 | Fuga de información en errores [v5.2] | Número de incidencia; detalle privado y sin datos personales (R-36) | `api()` |
 | Evadir el límite por red con una cabecera falsa [v5.2] | IP de la cabecera del proxy de Supabase, no del primer valor del cliente | `privado.red()` |
 | Script de inicio de sesión alterado en la CDN [v5.2] | Versión fija con hash de integridad (`integrity`) y política de contenido (`Content-Security-Policy`) | HTML |
@@ -1396,6 +1406,7 @@ La prioridad es que los datos sigan en orden y el sistema siga rápido. **No se 
 | Sin WAF ni límite por IP antes de la base | No cabe en el plazo (D21) | Padrón, límite de intentos, índice único, alerta y "Cerrar ahora"; Cloudflare si las pruebas lo piden |
 | Sin cifrado de campos | Rompería las búsquedas (D21) | Tablas cerradas (RLS y `revoke`); cifrado en tránsito y en reposo de la plataforma |
 | El operador descarga listas y CSV | Ya ve esos datos (D21) | Cada descarga queda en la bitácora (R-39) |
+| [Sprint 6.4] Con un DNI inscrito se ven sus actividades y enlaces | Decisión del propietario (17/11): DNI, nombres y apellidos ya publicados; cuentas de WhatsApp bloqueadas; la directiva planeaba publicar los enlaces | Nunca código ni datos personales; las anuladas no cuentan; entrar al grupo sigue con aprobación del moderador. Las consultas no cuentan para los límites (contarlas bloquearía la red del coliseo) |
 | Sin copias automáticas (plan gratuito) | Sin presupuesto (D17) | Respaldo manual desde el panel, cada hora el día de apertura (sección 19) |
 | Sin protección automática contra `DROP TABLE` o borrar el proyecto | La base no puede impedirlo desde dentro | Congelamiento, reglas para cambiar el SQL y respaldo previo (sección 20) |
 
@@ -1721,7 +1732,7 @@ Durante la construcción de las láminas, el simulador detectó cinco fallas, ya
 | Bloque | Comprueba | Crítico |
 |---|---|---|
 | R · Privilegios | Como anónimo: leer `padron` e `inscripciones` por la API REST, llamar funciones de `privado`, ejecutar acciones de panel. Todo rechazado. Una prueba por rol en cada acción | Sí |
-| S · Sin comprobantes | `duplicado` sin código, actividades ni enlaces; `registrado` sin código | Sí |
+| S · Sin comprobantes | [Sprint 6.4] `duplicado` al verificar con sus actividades y grupos, sin código ni datos personales, también con el sistema cerrado; anulada → flujo normal; al registrar, solo el aviso; `registrado` sin código | Sí |
 | T · Carreras | 100 personas por los últimos 10 cupos; dos cambios simultáneos de la misma inscripción; anulación mientras otros toman los cupos; reducir cupo mientras otros confirman | Sí |
 | U · Idempotencia | Reenviar la misma solicitud tras perder la respuesta: misma respuesta, ningún cambio doble; misma solicitud con otros datos → `solicitud_repetida` | Sí |
 | V · Integridad | Tras cada bloque, cada contador igual a sus inscripciones; inserción a mano mantiene la integridad | Sí |

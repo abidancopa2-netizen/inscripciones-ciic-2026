@@ -217,6 +217,17 @@ class Ataque:
         tipos = [self.tipo(r) for r in rs]
         self.ok('El mismo documento 20 veces a la vez: una sola inscripción', tipos.count('registrado') == 1, tipos)
         self.ok('Repetirlo después → duplicado, sin datos de la inscripción', self.tipo(self.registrar(d1, ids)) == 'duplicado')
+        # Sprint 6.4: verificar un documento inscrito devuelve sus grupos, pero nunca código ni datos personales
+        v = self.rpc({'action': 'verificar', 'dni': d1, 'dispositivo': 'atk-' + uuid.uuid4().hex[:12]})[1]
+        permitidos = {'id', 'tipo', 'nombre', 'fecha', 'inicio', 'fin', 'lugar', 'grupoModo', 'grupo'}
+        txt = json.dumps(v, ensure_ascii=False) if isinstance(v, dict) else ''
+        self.ok('Verificar un documento inscrito → sus grupos, sin código, celular, correo ni nombre (Sprint 6.4)',
+                isinstance(v, dict) and v.get('tipo') == 'duplicado' and isinstance(v.get('actividades'), list) and len(v['actividades']) == 2
+                and not any(k in v for k in CAMPOS_PERSONALES) and all(set(a) <= permitidos for a in v['actividades'])
+                and 'CIIC-' not in txt and '@' not in txt, str(v)[:120])
+        n = sum(1 for _ in range(30) if self.tipo(self.rpc({'action': 'verificar', 'dni': d1})[1]) == 'duplicado')
+        self.info('Consultar los grupos de un documento inscrito no gasta intentos', f'{n} de 30 consultas seguidas desde la misma red respondieron sus grupos: '
+                  'quien conozca un DNI inscrito ve sus actividades y enlaces (riesgo aceptado, Sprint 6.4)')
         d2 = self.muestra['1'].pop()
         otro = next(x['id'] for x in acts if x['id'] not in ids and x['fecha'] in dias[:2])
         casos = [('3 actividades', {'actividades': ids + [otro]}), ('la misma actividad dos veces', {'actividades': [ids[1], ids[1]]}),

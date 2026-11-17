@@ -742,7 +742,16 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
     ' Llegaste al límite: espera ' + S.cfg.ventanaMin + ' minutos o escríbenos para ayudarte.';
 
   // ── participante ──
-  const duplicado = () => fallo('duplicado', 'Este documento ya está inscrito. Si necesitas ayuda, escríbenos.');   // R-31: sin datos
+  const duplicado = () => fallo('duplicado', 'Este documento ya está inscrito. Si necesitas ayuda, escríbenos.');   // registrar: solo el aviso
+  // Sprint 6.4 (R-31): verificar con un documento inscrito devuelve sus grupos, sin código, celular, correo ni nombre
+  function yaInscrito(i) {
+    const existen = ordenar(i.acts.map((id) => S.acts.find((a) => a.id === id)).filter(Boolean));
+    const lista = existen.map((a) => ({ id: a.id, tipo: a.tipo, nombre: a.nombre, fecha: a.fecha, inicio: a.inicio, fin: a.fin, lugar: a.lugar,
+      grupoModo: a.grupoModo, grupo: a.grupoModo === 'ENLACE' ? (a.grupo || null) : null }));
+    i.acts.filter((id) => !S.acts.some((a) => a.id === id)).forEach((id) =>
+      lista.push({ id, tipo: '', nombre: id, fecha: '', inicio: '', fin: '', lugar: '', grupoModo: 'ENLACE', grupo: null }));
+    return fallo('duplicado', 'Este documento ya está inscrito. Si necesitas ayuda, escríbenos.', { yaInscrito: true, doc: i.documento, etapa: i.etapa, actividades: lista });
+  }
   function verificar(entrada, sinDuplicado, ctx) {
     const f = frenado(ctx);
     if (f) return fallo('demasiados_intentos', f === 'dispositivo' ? 'Hiciste ' + S.cfg.limiteDispositivo + ' intentos con documentos que no encontramos. Espera ' + S.cfg.ventanaMin +
@@ -752,7 +761,7 @@ window.CIIC_DATOS_DEMO = {"estado":{"cfg":{"abierto":true,"ronda":1,"cierreEn":n
       return fallo('formato', 'Revisa el número: escribe tu DNI de 8 dígitos, o tu carnet de extranjería o pasaporte, sin espacios.' + quedan(r), { intentosRestantes: r });
     }
     const doc = normalizarDoc(entrada);
-    if (!sinDuplicado && confirmada(doc)) { if (ctx.dispositivo) delete S.intentos['disp:' + ctx.dispositivo]; return duplicado(); }
+    if (!sinDuplicado && confirmada(doc)) { if (ctx.dispositivo) delete S.intentos['disp:' + ctx.dispositivo]; return yaInscrito(confirmada(doc)); }
     if (!S.cfg.abierto) return fallo('cerrado', 'Las inscripciones están cerradas en este momento. Esta página se actualiza sola cuando abran.');
     const p = enPadron(doc);
     if (!p) {

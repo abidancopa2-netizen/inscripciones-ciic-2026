@@ -83,9 +83,9 @@
     </form>
   </section>
 
-  <!-- Pantalla 3 · confirmación (se muestra una sola vez; sin código) -->
+  <!-- Pantalla 3 · confirmación, sin código. Sprint 6.4: también "Ya estás inscrito" al verificar un documento inscrito -->
   <section class="tarjeta" data-pantalla="3" aria-labelledby="titulo-3" hidden>
-    <div class="paso">Paso 3 de 3</div>
+    <div class="paso" id="paso-3">Paso 3 de 3</div>
     <h2 id="titulo-3">¡Inscripción confirmada!</h2>
     <div class="mensaje" data-estilo="aviso" id="aviso-unica">Esta confirmación se muestra una sola vez: entra ahora a tus grupos o toma una captura de pantalla.</div>
     <dl class="comprobante" id="comprobante"></dl>
@@ -226,8 +226,10 @@
       verif = r; actividades = r.actividades || []; sel = [];
       mensaje($('msg-1'), null); mensaje($('msg-verif'), r); mensaje($('msg-2'), null);
       pintarActividades(); pantalla(2);
+    } else if (r.tipo === 'duplicado' && Array.isArray(r.actividades)) {
+      mensaje($('msg-1'), null); yaInscrito(r);      // Sprint 6.4: sus grupos, sin código ni datos personales (R-31)
     } else {
-      mensaje($('msg-1'), r);      // incluye "duplicado": solo el aviso, sin datos (R-31)
+      mensaje($('msg-1'), r);      // "duplicado" sin actividades (base anterior): solo el aviso
       if (r.tipo === 'demasiados_intentos') { $('btn-verificar').disabled = true; setTimeout(() => { $('btn-verificar').disabled = false; }, (r.esperaMinutos || 10) * 60000); }
     }
   });
@@ -301,7 +303,12 @@
     const r = await api(p, true, () => mensaje($('msg-2'), { tipo: 'espera', mensaje: 'Estás en la fila: hay mucha demanda. Seguimos intentando; no recargues ni cierres la página.' }));
     ocupado($('btn-confirmar'), false, 'Confirmar inscripción');
     if (r.tipo === 'registrado') { firma = ''; return confirmacion(r); }
-    if (r.tipo === 'duplicado' || r.tipo === 'cerrado') return volverAlInicio(r);
+    if (r.tipo === 'duplicado') {      // Sprint 6.4: registrar responde solo el aviso; se vuelve a verificar para mostrar sus grupos
+      const d = verif && verif.doc; volverAlInicio(r, d);
+      if (d) $('form-doc').requestSubmit();
+      return;
+    }
+    if (r.tipo === 'cerrado') return volverAlInicio(r);
     if (r.tipo === 'recargar') return volverAlInicio(r, verif.doc);
     if (r.tipo === 'solicitud_repetida') firma = '';
     if (r.actividades) actividades = r.actividades;
@@ -311,26 +318,37 @@
     mensaje($('msg-2'), r);
   });
 
-  // ── Pantalla 3 · confirmación única (R-31: sin código) ──
-  function confirmacion(r) {
+  // ── Pantalla 3 · confirmación (R-31: sin código). Sprint 6.4: la misma pantalla en modo consulta, "Ya estás inscrito" ──
+  function pintarComprobante(r, consulta) {
+    $('paso-3').textContent = consulta ? 'Consulta' : 'Paso 3 de 3';
+    $('titulo-3').textContent = consulta ? 'Ya estás inscrito. Estos son tus grupos' : '¡Inscripción confirmada!';
+    const av = $('aviso-unica');
+    av.dataset.estilo = consulta ? 'info' : 'aviso';
+    av.textContent = consulta ? 'Puedes volver a consultar tus grupos cuando quieras: entra a esta página y escribe tu documento.'
+      : 'Esta confirmación se muestra una sola vez: entra ahora a tus grupos o toma una captura de pantalla.';
     const dl = $('comprobante'); dl.textContent = '';
+    dl.dataset.modo = consulta ? 'consulta' : 'confirmacion';
     const fila = (t, nodo) => { dl.appendChild(el('dt', {}, t)); dl.appendChild(nodo); };
     fila('Documento', el('dd', {}, r.doc));
     fila('Etapa', el('dd', {}, 'Etapa ' + r.etapa));
     (r.actividades || []).forEach((a) => {
-      const dd = el('dd', { 'data-actividad': a.id }, (a.tipo === 'VISITA' ? 'Visita · ' : 'Taller · ') + a.nombre);
-      dd.appendChild(el('small', {}, a.inicio + '–' + a.fin + ' · ' + a.lugar));
+      const dd = el('dd', { 'data-actividad': a.id }, (a.tipo === 'VISITA' ? 'Visita · ' : a.tipo === 'TALLER' ? 'Taller · ' : '') + a.nombre);
+      if (a.inicio || a.lugar) dd.appendChild(el('small', {}, [a.inicio && a.fin ? a.inicio + '–' + a.fin : '', a.lugar].filter(Boolean).join(' · ')));
       if (a.descripcion) dd.appendChild(el('small', {}, a.descripcion));
-      if (a.grupoModo === 'MANUAL') dd.appendChild(el('small', { 'data-grupo': 'manual' }, 'La organización te agregará al grupo de WhatsApp con tu número ' + r.celular + '. Si no es correcto, escríbenos.'));
+      if (a.grupoModo === 'MANUAL') dd.appendChild(el('small', { 'data-grupo': 'manual' }, consulta
+        ? 'La organización te agregará al grupo de WhatsApp con el número que registraste. Si no es correcto, escríbenos.'
+        : 'La organización te agregará al grupo de WhatsApp con tu número ' + r.celular + '. Si no es correcto, escríbenos.'));
       else if (a.grupo) {
         dd.appendChild(el('a', { class: 'boton whatsapp chico', href: a.grupo, target: '_blank', rel: 'noopener', 'data-grupo': 'enlace' }, 'Unirme al grupo ' + (a.tipo === 'VISITA' ? 'de la visita' : 'del taller')));
         dd.appendChild(el('small', {}, 'Un administrador aprobará tu ingreso.'));
       } else dd.appendChild(el('small', { 'data-grupo': 'pendiente' }, 'Aún no hay grupo: te escribiremos por WhatsApp.'));
-      fila(dia(a.fecha), dd);
+      fila(a.fecha ? dia(a.fecha) : 'Actividad', dd);
     });
     verif = null; sel = [];
     pantalla(3);
   }
+  const confirmacion = (r) => pintarComprobante(r, false);
+  const yaInscrito = (r) => pintarComprobante(r, true);
   $('btn-imprimir').addEventListener('click', () => window.print());
   $('btn-inicio').addEventListener('click', () => volverAlInicio(null));
 
@@ -345,7 +363,7 @@
     });
     const sel = el('select', { 'aria-label': 'Ver estado' });
     [['', 'Ver estado…'], ['espera', 'Fila de espera'], ['sin_conexion', 'Sin conexión'], ['cuenta', 'Cuenta regresiva'], ['cerrado', 'Cerrado'],
-     ['intentos', 'Demasiados intentos'], ['error', 'Error del sistema'], ['p2', 'Pantalla 2 · elegir'], ['p3', 'Pantalla 3 · confirmación'], ['reset', 'Restablecer']]
+     ['intentos', 'Demasiados intentos'], ['error', 'Error del sistema'], ['p2', 'Pantalla 2 · elegir'], ['p3', 'Pantalla 3 · confirmación'], ['p3c', 'Pantalla 3 · ya inscrito'], ['reset', 'Restablecer']]
       .forEach(([v, t]) => sel.appendChild(el('option', { value: v }, t)));
     sel.addEventListener('change', () => { simular(sel.value); sel.value = ''; });
     c.appendChild(sel);
@@ -365,10 +383,12 @@
     if (cual === 'intentos') mensaje($('msg-1'), { tipo: 'demasiados_intentos', mensaje: 'Hiciste 4 intentos con documentos que no encontramos. Espera 10 minutos o escríbenos para ayudarte.' });
     if (cual === 'error') mensaje($('msg-1'), { tipo: 'error_servidor', mensaje: 'Ocurrió un error en el sistema. Intenta de nuevo en unos segundos.', incidencia: 'INC-0007' });
     if (cual === 'p2') { volverAlInicio(null); $('doc').value = '04567812'; $('form-doc').requestSubmit(); }
-    if (cual === 'p3') {
+    if (cual === 'p3' || cual === 'p3c') {
       const e = await api({ action: 'estado', conActividades: true }); const acts = e.actividades || [];
       const muestra = (id, extra) => Object.assign({}, acts.find((a) => a.id === id) || acts[0], extra);
-      confirmacion({ doc: '04567812', etapa: 1, celular: '+51987654321', actividades: [muestra('VIS01', { grupoModo: 'ENLACE', grupo: 'https://chat.whatsapp.com/PRUEBA' }), muestra('TAL10', { grupoModo: 'ENLACE', grupo: '' }), muestra('VIS11', { grupoModo: 'MANUAL', grupo: null })] });
+      const lista = [muestra('VIS01', { grupoModo: 'ENLACE', grupo: 'https://chat.whatsapp.com/PRUEBA' }), muestra('TAL10', { grupoModo: 'ENLACE', grupo: '' }), muestra('VIS11', { grupoModo: 'MANUAL', grupo: null })];
+      if (cual === 'p3') confirmacion({ doc: '04567812', etapa: 1, celular: '+51987654321', actividades: lista });
+      else yaInscrito({ doc: '04567812', etapa: 1, actividades: lista.map((a) => Object.assign({}, a, { descripcion: undefined })) });
     }
     pintarBanner();
   }
