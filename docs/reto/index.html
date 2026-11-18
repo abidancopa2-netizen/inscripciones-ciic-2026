@@ -1,77 +1,73 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" class="t-participante">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>RETO CIDEIC 2026 · Consulta tu grupo</title>
+<link rel="stylesheet" href="../base.css">
+<script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"claro":"oscuro";document.documentElement.setAttribute("data-tema",t)})();</script>
+<link rel="stylesheet" href="../tema/fuentes/saira.css">
+<link rel="stylesheet" href="../tema/participante.css">
 <style>
-  :root {
-    --fondo: #f4f1ea; --tarjeta: #fffdf8; --texto: #1f2a24; --suave: #5d6b63;
-    --verde: #0f4a30; --verde-2: #176b45; --borde: #d9d3c4; --error: #9b2c1f; --wa: #1f8f4e;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --fondo: #121815; --tarjeta: #1a221e; --texto: #e8ece9; --suave: #a3b0a9;
-            --verde: #7fd0a3; --verde-2: #5fbf8a; --borde: #2e3a34; --error: #ff8a7a; --wa: #2fb36a; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--fondo); color: var(--texto);
-         font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
-  main { width: 100%; max-width: 460px; padding: 32px 16px 48px; }
-  .marca { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--suave); margin: 0 0 6px; }
-  h1 { margin: 0 0 6px; font-size: 30px; line-height: 1.15; color: var(--verde); }
-  .bajada { margin: 0 0 24px; color: var(--suave); }
-  .tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 16px; padding: 20px; }
-  label { display: block; font-weight: 600; margin-bottom: 8px; }
-  input { width: 100%; font: inherit; font-size: 20px; letter-spacing: .04em; padding: 12px 14px; border-radius: 10px;
-          border: 1.5px solid var(--borde); background: transparent; color: var(--texto); }
-  input:focus { outline: 3px solid color-mix(in srgb, var(--verde-2) 35%, transparent); border-color: var(--verde-2); }
-  button { width: 100%; margin-top: 12px; font: inherit; font-weight: 700; padding: 13px; border: 0; border-radius: 10px;
-           background: var(--verde); color: var(--tarjeta); cursor: pointer; }
-  button:disabled { opacity: .6; cursor: wait; }
-  .msg { margin: 12px 0 0; min-height: 1.5em; color: var(--suave); }
-  .msg.error { color: var(--error); }
-  .resultado { display: none; text-align: center; }
-  .resultado.ver { display: block; }
-  .grupo { font-size: 15px; color: var(--suave); margin: 0; }
-  .numero { font-size: 76px; font-weight: 800; line-height: 1; color: var(--verde); margin: 6px 0 2px; }
-  .de { color: var(--suave); margin: 0 0 18px; }
-  .coach { border-top: 1px solid var(--borde); padding-top: 14px; margin: 0 0 18px; }
-  .coach span { display: block; font-size: 13px; text-transform: uppercase; letter-spacing: .1em; color: var(--suave); }
-  .coach strong { font-size: 21px; }
-  a.wa { display: block; text-decoration: none; font-weight: 700; padding: 14px; border-radius: 10px; background: var(--wa); color: #fff; }
-  .nota { font-size: 14px; color: var(--suave); margin: 10px 0 0; }
-  .otra { background: transparent; color: var(--verde); border: 1.5px solid var(--borde); }
-  footer { margin-top: 24px; font-size: 14px; color: var(--suave); text-align: center; }
+  /* Solo para el Reto: el número de grupo y el bloque del coach, con los colores del tema */
+  .reto-grupo { text-align: center; padding: 6px 0 18px; border-bottom: 1px solid var(--linea); margin-bottom: 16px; }
+  .reto-grupo span { display: block; color: var(--tinta-3); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; }
+  .reto-grupo strong { display: block; font-size: clamp(4.5rem, 18vw, 6rem); line-height: 1; font-weight: 700; font-stretch: 87.5%; color: var(--menta); margin: 4px 0; }
+  .reto-grupo em { font-style: normal; color: var(--tinta-2); }
+  .reto-coach { text-align: center; margin-bottom: 18px; }
+  .reto-coach span { display: block; color: var(--tinta-3); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; }
+  .reto-coach strong { font-size: 1.35rem; color: var(--tinta); }
+  .reto-nota { text-align: center; color: var(--tinta-2); font-size: .9rem; margin: 8px 0 14px; }
+  a.boton { text-decoration: none; display: block; text-align: center; }
 </style>
 </head>
 <body>
-<main>
-  <p class="marca">VII CIDEIC · UCSM</p>
-  <h1>RETO CIDEIC 2026</h1>
-  <p class="bajada">Escribe tu DNI y descubre tu grupo, tu coach y el enlace de WhatsApp.</p>
+<!-- Tema CIDEIC · escena decorativa (la misma del sistema de inscripciones) -->
+<div class="escena" aria-hidden="true">
+  <div class="cuadro">
+    <div class="lienzo alto"><div class="capa c-cielo"><i class="v-oscuro"></i><i class="v-claro"></i></div></div>
+    <div class="lienzo bajo"><div class="capa c-paisaje"><i class="v-oscuro"><b class="nitida"></b><b class="difusa"></b></i><i class="v-claro"><b class="nitida"></b><b class="difusa"></b></i><i class="aura"></i></div></div>
+  </div>
+  <div class="velo"></div>
+  <div class="escena-logo"><div class="fila-logo v-oscuro"><img class="l-marca" alt="" src="../tema/img/logo-marca-oscuro.webp"><img class="l-linea" alt="" src="../tema/img/logo-linea-oscuro.webp"><img class="l-texto" alt="" src="../tema/img/logo-texto-oscuro.webp"></div><div class="fila-logo v-claro"><img class="l-marca" alt="" src="../tema/img/logo-marca-claro.webp"><img class="l-linea" alt="" src="../tema/img/logo-linea-claro.webp"><img class="l-texto" alt="" src="../tema/img/logo-texto-claro.webp"></div></div>
+</div>
+<button type="button" class="tema-btn" role="switch" aria-checked="true" aria-label="Modo oscuro" title="Cambiar entre modo claro y oscuro"><span class="tema-pista" aria-hidden="true"><span class="tema-perilla"></span><svg class="i-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></span></button>
 
-  <section class="tarjeta" id="consulta">
-    <form id="f" autocomplete="off">
-      <label for="doc">Tu DNI, carnet de extranjería o pasaporte</label>
-      <input id="doc" inputmode="text" maxlength="14" placeholder="12345678" required>
-      <button id="btn" type="submit">Ver mi grupo</button>
-      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+<header class="cabecera">
+  <div class="contenido">
+    <img class="marca v-oscuro" src="../tema/img/cabecera-oscuro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130"><img class="marca v-claro" src="../tema/img/cabecera-claro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130">
+    <h1>VII CIDEIC · UCSM</h1>
+    <p>RETO CIDEIC 2026</p>
+  </div>
+</header>
+
+<main class="contenido">
+  <!-- Pantalla 1 · consulta -->
+  <section class="tarjeta" data-pantalla="1" id="consulta" aria-labelledby="t1">
+    <div class="paso">Consulta tu grupo</div>
+    <h2 id="t1">Escribe tu documento</h2>
+    <form id="f" autocomplete="off" novalidate>
+      <label for="doc">DNI, carnet de extranjería o pasaporte</label>
+      <input id="doc" maxlength="20" placeholder="Ej.: 45678912" required>
+      <button class="boton ancho-total" id="btn" type="submit">Ver mi grupo</button>
     </form>
+    <div id="msg" role="status" aria-live="polite"></div>
   </section>
 
-  <section class="tarjeta resultado" id="resultado" aria-live="polite">
-    <p class="grupo">Perteneces al grupo</p>
-    <p class="numero" id="r-num">–</p>
-    <p class="de" id="r-de">de 16</p>
-    <p class="coach"><span>Tu coach</span><strong id="r-coach">–</strong></p>
-    <a class="wa" id="r-wa" href="#" target="_blank" rel="noopener">Unirme al grupo de WhatsApp</a>
-    <p class="nota">Un administrador aprobará tu ingreso.</p>
-    <button class="otra" id="otra" type="button">Consultar otro DNI</button>
+  <!-- Pantalla 2 · tu grupo -->
+  <section class="tarjeta" data-pantalla="2" id="resultado" aria-labelledby="t2" hidden>
+    <div class="paso">RETO CIDEIC 2026</div>
+    <h2 id="t2">¡Ya tienes equipo!</h2>
+    <div class="reto-grupo"><span>Perteneces al grupo</span><strong id="r-num">–</strong><em id="r-de">de 16</em></div>
+    <div class="reto-coach"><span>Tu coach</span><strong id="r-coach">–</strong></div>
+    <a class="boton whatsapp ancho-total" id="r-wa" href="#" target="_blank" rel="noopener">Unirme al grupo de WhatsApp</a>
+    <p class="reto-nota">Tu coach aprobará tu ingreso al grupo.</p>
+    <button class="boton secundario ancho-total" id="otra" type="button">Consultar otro documento</button>
   </section>
-
-  <footer>¿No apareces o tienes dudas? Escríbenos al WhatsApp +51 927 457 291.</footer>
 </main>
+<footer class="pie" id="pie">¿No apareces o tienes dudas? Escríbenos al WhatsApp <a href="https://wa.me/51927457291" target="_blank" rel="noopener">+51 927 457 291</a></footer>
+
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -85,7 +81,7 @@
     return d;
   };
   const valido = (d) => /^[A-Z0-9]{6,12}$/.test(d) && /\d/.test(d);
-  const msg = (t, error) => { $('msg').textContent = t; $('msg').className = 'msg' + (error ? ' error' : ''); };
+  const msg = (t, estilo) => { const m = $('msg'); m.textContent = t || ''; m.className = t ? 'mensaje' : ''; if (t) m.dataset.estilo = estilo || 'info'; else delete m.dataset.estilo; };
 
   async function cargar() {
     if (datos) return datos;
@@ -110,29 +106,31 @@
   $('f').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const doc = normalizar($('doc').value);
-    if (!valido(doc)) return msg('Revisa el número: escribe tu documento sin espacios.', true);
-    if (!window.crypto || !crypto.subtle) return msg('Tu navegador no permite la consulta. Prueba con otro navegador.', true);
-    $('btn').disabled = true; msg('Buscando…');
+    if (!valido(doc)) return msg('Revisa el número: escribe tu documento sin espacios.', 'error');
+    if (!window.crypto || !crypto.subtle) return msg('Tu navegador no permite la consulta. Prueba con otro navegador.', 'error');
+    $('btn').disabled = true; msg('Buscando…', 'info');
     try {
       const r = await consultar(doc);
-      if (!r) { msg('No encontramos tu DNI. Escríbenos al WhatsApp +51 927 457 291.', true); return; }
+      if (!r) { msg('No encontramos tu DNI. Escríbenos al WhatsApp +51 927 457 291.', 'aviso'); return; }
       $('r-num').textContent = r.g;
       $('r-de').textContent = 'de ' + r.t;
       $('r-coach').textContent = r.c;
       $('r-wa').href = r.w;
-      $('consulta').style.display = 'none';
-      $('resultado').classList.add('ver');
+      $('consulta').hidden = true;
+      $('resultado').hidden = false;
+      window.scrollTo(0, 0);
       msg('');
     } catch (e) {
-      msg('No pudimos consultar ahora. Revisa tu conexión y vuelve a intentarlo.', true);
+      msg('No pudimos consultar ahora. Revisa tu conexión y vuelve a intentarlo.', 'aviso');
     } finally { $('btn').disabled = false; }
   });
 
   $('otra').addEventListener('click', () => {
-    $('resultado').classList.remove('ver'); $('consulta').style.display = '';
+    $('resultado').hidden = true; $('consulta').hidden = false;
     $('doc').value = ''; $('doc').focus();
   });
 })();
 </script>
+<script src="../tema/participante.js"></script>
 </body>
 </html>
