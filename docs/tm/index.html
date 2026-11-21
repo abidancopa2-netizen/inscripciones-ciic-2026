@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es" class="t-participante">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Fiesta CIDEIC · Tu código Teatro Montana</title>
+<link rel="stylesheet" href="../base.css">
+<script>(function(){var t=null;try{t=localStorage.getItem("cideic_tema")}catch(e){}if(t!=="claro"&&t!=="oscuro")t=window.matchMedia&&matchMedia("(prefers-color-scheme: light)").matches?"claro":"oscuro";document.documentElement.setAttribute("data-tema",t)})();</script>
+<link rel="stylesheet" href="../tema/fuentes/saira.css">
+<link rel="stylesheet" href="../tema/participante.css">
+<style>
+  /* Solo para los códigos TM, con los colores del tema */
+  .tm-nombre { text-align: center; color: var(--tinta-2); margin: 0 0 14px; }
+  .tm-cod { border-top: 1px solid var(--linea); padding-top: 16px; margin-top: 4px; text-align: center; }
+  .tm-cod + .tm-cod { margin-top: 18px; }
+  .tm-cod span { display: block; color: var(--tinta-3); font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; }
+  .tm-cod strong { display: block; font-family: var(--mono, ui-monospace, monospace); font-size: clamp(1.6rem, 7vw, 2.1rem); letter-spacing: .06em; color: var(--menta); margin: 4px 0 12px; word-break: break-all; }
+  .tm-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .tm-acciones .boton { margin: 0; }
+  .tm-nota { text-align: center; color: var(--tinta-2); font-size: .9rem; margin: 14px 0; }
+  .tm-pasos { margin: 18px 0 6px; padding: 14px 16px 14px 34px; border-radius: 12px; background: var(--menta-suave); color: var(--tinta); font-size: .95rem; }
+  .tm-pasos li + li { margin-top: 6px; }
+  .tm-canje { margin-top: 10px; }
+</style>
+</head>
+<body>
+<!-- Tema CIDEIC · escena decorativa (la misma del sistema de inscripciones) -->
+<div class="escena" aria-hidden="true">
+  <div class="cuadro">
+    <div class="lienzo alto"><div class="capa c-cielo"><i class="v-oscuro"></i><i class="v-claro"></i></div></div>
+    <div class="lienzo bajo"><div class="capa c-paisaje"><i class="v-oscuro"><b class="nitida"></b><b class="difusa"></b></i><i class="v-claro"><b class="nitida"></b><b class="difusa"></b></i><i class="aura"></i></div></div>
+  </div>
+  <div class="velo"></div>
+  <div class="escena-logo"><div class="fila-logo v-oscuro"><img class="l-marca" alt="" src="../tema/img/logo-marca-oscuro.webp"><img class="l-linea" alt="" src="../tema/img/logo-linea-oscuro.webp"><img class="l-texto" alt="" src="../tema/img/logo-texto-oscuro.webp"></div><div class="fila-logo v-claro"><img class="l-marca" alt="" src="../tema/img/logo-marca-claro.webp"><img class="l-linea" alt="" src="../tema/img/logo-linea-claro.webp"><img class="l-texto" alt="" src="../tema/img/logo-texto-claro.webp"></div></div>
+</div>
+<button type="button" class="tema-btn" role="switch" aria-checked="true" aria-label="Modo oscuro" title="Cambiar entre modo claro y oscuro"><span class="tema-pista" aria-hidden="true"><span class="tema-perilla"></span><svg class="i-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-luna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></span></button>
+
+<header class="cabecera">
+  <div class="contenido">
+    <img class="marca v-oscuro" src="../tema/img/cabecera-oscuro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130"><img class="marca v-claro" src="../tema/img/cabecera-claro.webp" alt="CIDEIC · Congreso Internacional de Estudiantes de Ingeniería Civil" width="510" height="130">
+    <h1>VII CIDEIC · UCSM</h1>
+    <p>Fiesta CIDEIC · Teatro Montana</p>
+  </div>
+</header>
+
+<main class="contenido">
+  <!-- Pantalla 1 · consulta -->
+  <section class="tarjeta" data-pantalla="1" id="consulta" aria-labelledby="t1">
+    <div class="paso">Fiesta CIDEIC</div>
+    <h2 id="t1">Escribe tu documento</h2>
+    <form id="f" autocomplete="off" novalidate>
+      <label for="doc">DNI, carnet de extranjería o pasaporte</label>
+      <input id="doc" maxlength="20" placeholder="Ej.: 45678912" required>
+      <button class="boton ancho-total" id="btn" type="submit">Ver mi código</button>
+    </form>
+    <div id="msg" role="status" aria-live="polite"></div>
+  </section>
+
+  <!-- Pantalla 2 · tu código -->
+  <section class="tarjeta" data-pantalla="2" id="resultado" aria-labelledby="t2" hidden>
+    <div class="paso">Fiesta CIDEIC · Teatro Montana</div>
+    <h2 id="t2">¡Aquí está tu código!</h2>
+    <p class="tm-nombre" id="r-nombre"></p>
+    <div class="tm-cod">
+      <span>Tu código de canje</span>
+      <strong id="r-cod">–</strong>
+      <div class="tm-acciones">
+        <button class="boton secundario" id="copiar" type="button">Copiar código</button>
+        <a class="boton" id="canjear" href="#" target="_blank" rel="noopener">Canjear en TM</a>
+      </div>
+    </div>
+    <ol class="tm-pasos">
+      <li><b>Copia</b> tu código.</li>
+      <li>Toca <b>Canjear en TM</b>: se abre la página de Teatro Montana.</li>
+      <li>Pega el código y <b>registra tus datos</b>.</li>
+      <li>Guarda la entrada que te den. En la puerta revisan tu <b>DNI</b>.</li>
+    </ol>
+    <p class="tm-nota">Tu código es tu entrada: no lo compartas.</p>
+    <button class="boton secundario ancho-total" id="otra" type="button">Consultar otro documento</button>
+  </section>
+</main>
+<footer class="pie" id="pie">¿No apareces o tienes dudas? Escríbenos al WhatsApp <a href="https://wa.me/51927457291" target="_blank" rel="noopener">+51 927 457 291</a></footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const hex = (u8) => Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join('');
+  let datos = null;
+
+  const normalizar = (s) => {
+    let d = (s || '').replace(/[\s.\-]/g, '').toUpperCase();
+    if (/^\d+$/.test(d) && d.length < 8) d = d.padStart(8, '0');
+    return d;
+  };
+  const valido = (d) => /^[A-Z0-9]{6,12}$/.test(d) && /\d/.test(d);
+  const msg = (t, estilo) => { const m = $('msg'); m.textContent = t || ''; m.className = t ? 'mensaje' : ''; if (t) m.dataset.estilo = estilo || 'info'; else delete m.dataset.estilo; };
+
+  async function cargar() {
+    if (datos) return datos;
+    const r = await fetch('datos.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('datos');
+    return (datos = await r.json());
+  }
+
+  async function consultar(clave) {
+    const d = await cargar();
+    const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(clave), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: b64(d.sal), iterations: d.iter }, base, 512));
+    const entrada = d.e[hex(bits.slice(0, 16))];
+    if (!entrada) return null;
+    const raw = b64(entrada);
+    const llave = await crypto.subtle.importKey('raw', bits.slice(32, 64), 'AES-GCM', false, ['decrypt']);
+    const plano = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: raw.slice(0, 12) }, llave, raw.slice(12));
+    return JSON.parse(new TextDecoder().decode(plano).trim());
+  }
+
+  const CANJE = 'https://teatromontana.guruitperu.com/redeem/?codigo=';
+  function mostrar(r) {
+    $('r-nombre').textContent = r.n || '';
+    $('r-cod').textContent = r.k;
+    $('canjear').href = CANJE + encodeURIComponent(r.k);
+  }
+  $('copiar').addEventListener('click', async () => {
+    const b = $('copiar'), k = $('r-cod').textContent;
+    try { await navigator.clipboard.writeText(k); b.textContent = '¡Copiado!'; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($('r-cod')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); b.textContent = 'Selecciónalo y cópialo'; }
+    setTimeout(() => (b.textContent = 'Copiar código'), 2000);
+  });
+
+  $('f').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const doc = normalizar($('doc').value);
+    if (!valido(doc)) return msg('Revisa el número: escribe tu documento sin espacios.', 'error');
+    if (!window.crypto || !crypto.subtle) return msg('Tu navegador no permite la consulta. Prueba con otro navegador.', 'error');
+    $('btn').disabled = true; msg('Buscando…', 'info');
+    try {
+      const d = await cargar();
+      const clave = doc;
+      const r = await consultar(clave);
+      if (!r) { msg('No encontramos un código para ese DNI. Revisa el número o escríbenos al WhatsApp +51 927 457 291.', 'aviso'); return; }
+      mostrar(r);
+      $('consulta').hidden = true; $('resultado').hidden = false; window.scrollTo(0, 0); msg('');
+    } catch (e) {
+      msg('No pudimos consultar ahora. Revisa tu conexión y vuelve a intentarlo.', 'aviso');
+    } finally { $('btn').disabled = false; }
+  });
+
+  $('otra').addEventListener('click', () => {
+    $('resultado').hidden = true; $('consulta').hidden = false;
+    $('doc').value = ''; $('r-cod').textContent = ''; $('doc').focus();
+  });
+})();
+</script>
+<script src="../tema/participante.js"></script>
+</body>
+</html>
