@@ -25,6 +25,7 @@
 </style>
 </head>
 <body>
+<script>document.body.classList.add('en-inicio');</script>
 <!-- Tema CIDEIC · escena decorativa (la misma del sistema de inscripciones) -->
 <div class="escena" aria-hidden="true">
   <div class="cuadro">
@@ -97,12 +98,14 @@
   const valido = (d) => /^[A-Z0-9]{6,12}$/.test(d) && /\d/.test(d);
   const msg = (t, estilo) => { const m = $('msg'); m.textContent = t || ''; m.className = t ? 'mensaje' : ''; if (t) m.dataset.estilo = estilo || 'info'; else delete m.dataset.estilo; };
 
-  async function cargar() {
-    if (datos) return datos;
-    const r = await fetch('datos.json', { cache: 'no-cache' });
-    if (!r.ok) throw new Error('datos');
-    return (datos = await r.json());
+  // Los datos se descargan apenas abre la página (no al primer clic). Si la descarga falla, se reintenta al consultar.
+  function cargar() {
+    if (!datos) datos = fetch('datos.json', { cache: 'no-cache' })
+      .then((r) => { if (!r.ok) throw new Error('datos'); return r.json(); })
+      .catch((e) => { datos = null; throw e; });
+    return datos;
   }
+  cargar().catch(() => {});
 
   async function consultar(clave) {
     const d = await cargar();
